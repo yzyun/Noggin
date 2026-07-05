@@ -49,6 +49,8 @@ interface QuestionsStore {
 
   allTags(): string[];
   allFolders(): string[];
+  /** Subjects ordered by most recent use (newest question first). */
+  recentFolders(): string[];
 }
 
 function questionPath(doc: QuestionDoc, folder: string): string {
@@ -207,5 +209,14 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
 
   allFolders() {
     return [...new Set(get().allRows.map((r) => r.folder).filter(Boolean))].sort();
+  },
+
+  recentFolders() {
+    // allRows is ordered newest-first, so first sighting = most recent use.
+    const seen: string[] = [];
+    for (const r of get().allRows) {
+      if (r.folder && !seen.includes(r.folder)) seen.push(r.folder);
+    }
+    return seen;
   },
 }));

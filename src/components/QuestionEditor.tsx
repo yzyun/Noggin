@@ -10,6 +10,7 @@ import { Markdown } from "./Markdown";
 import { DifficultyPicker } from "./fields/DifficultyPicker";
 import { ImageDrop } from "./fields/ImageDrop";
 import { MarkdownField } from "./fields/MarkdownField";
+import { SubjectSelect } from "./fields/SubjectSelect";
 import { TagInput } from "./fields/TagInput";
 
 interface Props {
@@ -25,7 +26,7 @@ const RECALL_MODES: { id: RecallMode; label: string }[] = [
 ];
 
 export function QuestionEditor({ editing, onClose }: Props) {
-  const { save, allTags, allFolders } = useQuestions();
+  const { save, allTags, recentFolders } = useQuestions();
 
   const [question, setQuestion] = useState(editing?.doc.question ?? "");
   const [answer, setAnswer] = useState(editing?.doc.answer ?? "");
@@ -41,9 +42,29 @@ export function QuestionEditor({ editing, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Keep folder/tags/source/difficulty for the next question in a batch;
+  // Keep subject/tags/source/difficulty for the next question in a batch;
   // only the content fields reset.
   const [savedFlash, setSavedFlash] = useState(false);
+  // Bumped after each batch save to remount + refocus the question field.
+  const [resetKey, setResetKey] = useState(0);
+
+  const clearContent = useCallback(() => {
+    setQuestion("");
+    setAnswer("");
+    setHint("");
+    setSolution("");
+    setResetKey((k) => k + 1);
+  }, []);
+
+  const clearAll = useCallback(() => {
+    clearContent();
+    setTags([]);
+    setDifficulty(null);
+    setSource("");
+    setRecall("both");
+    setFolder("");
+    setError(null);
+  }, [clearContent]);
 
   const buildDoc = useCallback((): QuestionDoc => {
     // Body kind is derived from the content — text, LaTeX and images all
@@ -86,11 +107,9 @@ export function QuestionEditor({ editing, onClose }: Props) {
       if (editing) {
         onClose();
       } else {
-        // Batch entry: clear content, keep metadata.
-        setQuestion("");
-        setAnswer("");
-        setHint("");
-        setSolution("");
+        // Batch entry: clear only the content; subject, tags, difficulty,
+        // source and recall stay put for the next question.
+        clearContent();
         setSavedFlash(true);
         setTimeout(() => setSavedFlash(false), 1500);
       }
@@ -125,6 +144,15 @@ export function QuestionEditor({ editing, onClose }: Props) {
         <div className="flex items-center gap-2">
           {savedFlash && <span className="text-xs text-green-600 dark:text-green-400">Saved ✓</span>}
           {error && <span className="max-w-64 truncate text-xs text-red-600 dark:text-red-400">{error}</span>}
+          {!editing && (
+            <button
+              onClick={clearAll}
+              className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              title="Clear content and all metadata"
+            >
+              Clear all
+            </button>
+          )}
           <button
             onClick={() => setShowPreview((p) => !p)}
             className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
@@ -154,19 +182,8 @@ export function QuestionEditor({ editing, onClose }: Props) {
           {/* Metadata row */}
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Folder</span>
-              <input
-                value={folder}
-                onChange={(e) => setFolder(e.target.value)}
-                placeholder="e.g. mechanics/kinematics"
-                list="folder-suggestions"
-                className="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
-              />
-              <datalist id="folder-suggestions">
-                {allFolders().map((f) => (
-                  <option key={f} value={f} />
-                ))}
-              </datalist>
+              <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Subject</span>
+              <SubjectSelect value={folder} onChange={setFolder} recent={recentFolders()} />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Source</span>
@@ -216,6 +233,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
               Question — type text and LaTeX together, e.g. Solve $x^2 - 4 = 0$
             </span>
             <MarkdownField
+              key={resetKey}
               value={question}
               onChange={setQuestion}
               placeholder={"A projectile is launched at $30^\\circ$ with speed $v_0$…"}
