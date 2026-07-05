@@ -216,3 +216,55 @@ pub fn vault_list(state: State<'_, AppState>, rel: String) -> Result<Vec<DirEntr
         Ok(out)
     })
 }
+
+/// Recursively list files under a vault directory, optionally filtered by
+/// extension (e.g. "md"). Used for rescans. Skips dot-directories.
+#[tauri::command]
+pub fn vault_list_recursive(
+    state: State<'_, AppState>,
+    rel: String,
+    ext: Option<String>,
+) -> Result<Vec<DirEntry>> {
+    with_vault(&state, |v| {
+        let root = resolve(&v.root, &rel)?;
+        let mut out = Vec::new();
+        let mut stack = vec![(root, rel.trim_end_matches('/').to_string())];
+        while let Some((dir, rel_dir)) = stack.pop() {
+            let Ok(entries) = fs::read_dir(&dir) else { continue };
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if name.starts_with('.') {
+                    continue;
+                }
+                let Ok(meta) = entry.metadata() else { continue };
+                let rel_child = if rel_dir.is_empty() {
+                    name.clone()
+                } else {
+                    format!("{rel_dir}/{name}")
+                };
+                if meta.is_dir() {
+                    stack.push((entry.path(), rel_child));
+                } else {
+                    if let Some(want) = ext.as_deref() {
+                        if !name.to_lowercase().ends_with(&format!(".{want}")) {
+                            continue;
+                        }
+                    }
+                    let mtime = meta
+                        .modified()
+                        .ok()
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    out.push(DirEntry {
+                        name,
+                        rel: rel_child,
+                        is_dir: false,
+                        mtime,
+                    });
+                }
+            }
+        }
+        Ok(out)
+    })
+}

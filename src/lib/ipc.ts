@@ -52,4 +52,17 @@ export const ipc = {
   removeQuestion: (id: string) => invoke<void>("index_remove_question", { id }),
   listQuestions: () => invoke<QuestionRow[]>("index_list_questions"),
   getQuestion: (id: string) => invoke<QuestionRow | null>("index_get_question", { id }),
+  search: (params: SearchParams) => invoke<QuestionRow[]>("index_search", { params }),
+  listRecursive: (rel: string, ext?: string) =>
+    invoke<DirEntry[]>("vault_list_recursive", { rel, ext: ext ?? null }),
 };
+
+/** Mirrors Rust SearchParams. All filters optional; AND semantics. */
+export interface SearchParams {
+  text?: string | null;
+  folder?: string | null;
+  tags: string[];
+  min_difficulty?: number | null;
+  max_difficulty?: number | null;
+  body_kind?: string | null;
+}

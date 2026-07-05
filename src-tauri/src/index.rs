@@ -52,6 +52,7 @@ pub struct QuestionRow {
     pub tags: Vec<String>,
     pub recall: String,
     pub created: Option<String>,
+    pub mtime: i64,
 }
 
 #[tauri::command]
@@ -110,11 +111,81 @@ pub fn index_remove_question(state: State<'_, AppState>, id: String) -> Result<(
 pub fn index_list_questions(state: State<'_, AppState>) -> Result<Vec<QuestionRow>> {
     with_db(&state, |db| {
         let mut stmt = db.prepare(
-            "SELECT id, path, title, body_kind, difficulty, folder, source, tags, recall, created
+            "SELECT id, path, title, body_kind, difficulty, folder, source, tags, recall, created, mtime
              FROM questions ORDER BY id DESC",
         )?;
         let rows = stmt
             .query_map([], row_to_question)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    })
+}
+
+/// Combinable filters for browsing the bank. All optional; AND semantics.
+#[derive(serde::Deserialize, Default)]
+pub struct SearchParams {
+    /// Free-text query. Space-separated terms are ANDed; each term matches
+    /// as a substring of title/question/answer/source/tags ("synth" finds
+    /// "photosynthesis"), like the search students actually expect.
+    pub text: Option<String>,
+    /// Folder path; matches the folder and everything nested under it.
+    pub folder: Option<String>,
+    /// Tags that must ALL be present.
+    pub tags: Vec<String>,
+    pub min_difficulty: Option<i64>,
+    pub max_difficulty: Option<i64>,
+    pub body_kind: Option<String>,
+}
+
+#[tauri::command]
+pub fn index_search(state: State<'_, AppState>, params: SearchParams) -> Result<Vec<QuestionRow>> {
+    with_db(&state, |db| {
+        let mut sql = String::from(
+            "SELECT q.id, q.path, q.title, q.body_kind, q.difficulty, q.folder, q.source, q.tags, q.recall, q.created, q.mtime
+             FROM questions q WHERE 1=1",
+        );
+        let mut binds: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+
+        if let Some(folder) = params.folder.as_deref().filter(|f| !f.is_empty()) {
+            sql.push_str(" AND (q.folder = ? OR q.folder LIKE ? || '/%')");
+            binds.push(Box::new(folder.to_string()));
+            binds.push(Box::new(folder.to_string()));
+        }
+        for tag in &params.tags {
+            sql.push_str(" AND EXISTS (SELECT 1 FROM json_each(q.tags) je WHERE je.value = ?)");
+            binds.push(Box::new(tag.clone()));
+        }
+        if let Some(min) = params.min_difficulty {
+            sql.push_str(" AND q.difficulty >= ?");
+            binds.push(Box::new(min));
+        }
+        if let Some(max) = params.max_difficulty {
+            sql.push_str(" AND q.difficulty <= ?");
+            binds.push(Box::new(max));
+        }
+        if let Some(kind) = params.body_kind.as_deref().filter(|k| !k.is_empty()) {
+            sql.push_str(" AND q.body_kind = ?");
+            binds.push(Box::new(kind.to_string()));
+        }
+        if let Some(text) = params.text.as_deref() {
+            for term in text.split_whitespace() {
+                sql.push_str(
+                    " AND q.id IN (SELECT id FROM questions_fts
+                       WHERE title LIKE '%'||?||'%' OR question LIKE '%'||?||'%'
+                          OR answer LIKE '%'||?||'%' OR source LIKE '%'||?||'%'
+                          OR tags LIKE '%'||?||'%')",
+                );
+                for _ in 0..5 {
+                    binds.push(Box::new(term.to_string()));
+                }
+            }
+        }
+        sql.push_str(" ORDER BY q.id DESC");
+
+        let mut stmt = db.prepare(&sql)?;
+        let params_ref: Vec<&dyn rusqlite::types::ToSql> = binds.iter().map(|b| b.as_ref()).collect();
+        let rows = stmt
+            .query_map(params_ref.as_slice(), row_to_question)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
     })
@@ -126,7 +197,7 @@ pub fn index_get_question(state: State<'_, AppState>, id: String) -> Result<Opti
     with_db(&state, |db| {
         Ok(db
             .query_row(
-                "SELECT id, path, title, body_kind, difficulty, folder, source, tags, recall, created
+                "SELECT id, path, title, body_kind, difficulty, folder, source, tags, recall, created, mtime
                  FROM questions WHERE id = ?1",
                 params![id],
                 row_to_question,
@@ -148,5 +219,6 @@ fn row_to_question(row: &rusqlite::Row<'_>) -> std::result::Result<QuestionRow, 
         tags: serde_json::from_str(&tags_json).unwrap_or_default(),
         recall: row.get(8)?,
         created: row.get(9)?,
+        mtime: row.get(10)?,
     })
 }

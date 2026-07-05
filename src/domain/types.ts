@@ -48,6 +48,8 @@ export interface QuestionRow {
   tags: string[];
   recall: RecallMode;
   created: string | null;
+  /** Unix seconds of the file's last write, used for rescan change detection. */
+  mtime: number;
 }
 
 export interface IndexStats {

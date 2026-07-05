@@ -1,9 +1,11 @@
 // Main app layout once a vault is open: sidebar navigation + content area.
 // Phase 0: the sections are placeholders; each later phase fills one in.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useVault } from "../state/vault";
+import { useQuestions } from "../state/questions";
 import { toggleTheme } from "../lib/theme";
+import { startVaultWatch } from "../lib/watch";
 import { QuestionsView } from "./QuestionsView";
 import { NotesView } from "./NotesView";
 
@@ -20,6 +22,18 @@ export function Shell() {
   const { root, stats, close } = useVault();
   const [active, setActive] = useState<NavId>("questions");
   const [, rerender] = useState(0);
+
+  // On vault open: reconcile the index with the files on disk, then keep
+  // it live via the folder watcher (catches external edits & drops).
+  useEffect(() => {
+    if (!root) return;
+    void useQuestions.getState().rescan();
+    let cleanup: (() => void) | undefined;
+    void startVaultWatch().then((fn) => {
+      cleanup = fn;
+    });
+    return () => cleanup?.();
+  }, [root]);
 
   const vaultName = root?.split("/").filter(Boolean).pop() ?? "";
 

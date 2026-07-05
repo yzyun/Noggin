@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parseQuestionFile, serializeQuestionFile, newQuestionMeta, FormatError } from "./format";
+import {
+  deriveBodyKind,
+  parseQuestionFile,
+  serializeQuestionFile,
+  newQuestionMeta,
+  FormatError,
+} from "./format";
 
 const SAMPLE = `---
 id: 01J8XTESTULID0000000000000
@@ -72,6 +78,28 @@ describe("parseQuestionFile", () => {
     expect(() => parseQuestionFile("---\nid: x\ntype: note\n---\n# Question\nq")).toThrow(
       FormatError,
     );
+  });
+});
+
+describe("deriveBodyKind", () => {
+  it("detects math via inline and display LaTeX", () => {
+    expect(deriveBodyKind("Solve $x^2-4=0$ for x")).toBe("math");
+    expect(deriveBodyKind("Evaluate:\n$$\\int_0^1 x\\,dx$$")).toBe("math");
+  });
+  it("detects image-dominant questions", () => {
+    expect(deriveBodyKind("![diagram](attachments/d.png)")).toBe("image");
+    expect(deriveBodyKind("See figure.\n![f](attachments/f.png)")).toBe("image");
+  });
+  it("long text with an image is still text/math", () => {
+    const q = `${"Describe the experimental setup shown and explain the result. "}![f](attachments/f.png)`;
+    expect(deriveBodyKind(q)).toBe("text");
+  });
+  it("plain prose is text", () => {
+    expect(deriveBodyKind("State Newton's third law.")).toBe("text");
+  });
+  it("derived on parse when body is missing", () => {
+    const doc = parseQuestionFile("---\nid: k\n---\n# Question\nSolve $x=1$");
+    expect(doc.meta.body).toBe("math");
   });
 });
 

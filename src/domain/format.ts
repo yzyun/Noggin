@@ -73,6 +73,12 @@ export function parseQuestionFile(raw: string): QuestionDoc {
   const question = sections.get("Question")?.trim();
   if (!question) throw new FormatError("missing `# Question` section");
 
+  // Files without an explicit body kind (e.g. scraped imports) get it
+  // derived from the content instead of defaulting to plain text.
+  if (!BODY_KINDS.includes(rawMeta.body as BodyKind)) {
+    meta.body = deriveBodyKind(question);
+  }
+
   return {
     meta,
     question,

@@ -1,20 +1,30 @@
-// Questions section: list of the bank (Phase 1: simple, newest first) with
-// expandable cards + the editor. Phase 2 adds the folder tree and filters.
+// Questions section: filter panel + result list + bulk actions + editor.
 
 import { useEffect, useState } from "react";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
 import { useQuestions } from "../state/questions";
+import { FilterPanel } from "./FilterPanel";
 import { Markdown } from "./Markdown";
 import { QuestionEditor } from "./QuestionEditor";
 
 export function QuestionsView() {
-  const { rows, loaded, error, load, openDoc, remove } = useQuestions();
+  const { rows, loaded, scanning, error, load, openDoc, removeMany } = useQuestions();
   const [mode, setMode] = useState<"list" | "edit">("list");
   const [editing, setEditing] = useState<{ row: QuestionRow; doc: QuestionDoc } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Drop selections that fell out of the current result set.
+  useEffect(() => {
+    setSelected((prev) => {
+      const visible = new Set(rows.map((r) => r.id));
+      const next = new Set([...prev].filter((id) => visible.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [rows]);
 
   if (mode === "edit") {
     return (
@@ -28,54 +38,103 @@ export function QuestionsView() {
     );
   }
 
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-800">
-        <h2 className="text-sm font-semibold">
-          Questions <span className="font-normal text-neutral-400">({rows.length})</span>
-        </h2>
-        <button
-          onClick={() => {
-            setEditing(null);
-            setMode("edit");
-          }}
-          className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500"
-        >
-          + New question
-        </button>
-      </div>
+  const allSelected = rows.length > 0 && selected.size === rows.length;
 
-      <div className="flex-1 overflow-y-auto p-4">
-        {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        {loaded && rows.length === 0 ? (
-          <div className="mt-16 text-center text-sm text-neutral-400">
-            No questions yet — create one, or drop .md files into the vault's{" "}
-            <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">questions/</code> folder.
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {rows.map((row) => (
-              <QuestionCard
-                key={row.id}
-                row={row}
-                onEdit={async () => {
-                  try {
-                    setEditing({ row, doc: await openDoc(row) });
-                    setMode("edit");
-                  } catch (e) {
-                    alert(`Could not open ${row.path}: ${e}`);
-                  }
-                }}
-                onDelete={async () => {
-                  if (confirm(`Delete "${row.title ?? row.id}"? The .md file will be removed.`)) {
-                    await remove(row);
-                  }
-                }}
-                openDoc={openDoc}
+  return (
+    <div className="flex h-full">
+      <FilterPanel />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-800">
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={() =>
+                  setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))
+                }
               />
-            ))}
-          </ul>
-        )}
+              all
+            </label>
+            <h2 className="text-sm font-semibold">
+              Questions <span className="font-normal text-neutral-400">({rows.length})</span>
+            </h2>
+            {scanning && <span className="text-xs text-neutral-400">syncing…</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            {selected.size > 0 && (
+              <button
+                onClick={async () => {
+                  const doomed = rows.filter((r) => selected.has(r.id));
+                  if (
+                    confirm(
+                      `Delete ${doomed.length} question${doomed.length > 1 ? "s" : ""}? The .md files will be removed.`,
+                    )
+                  ) {
+                    await removeMany(doomed);
+                    setSelected(new Set());
+                  }
+                }}
+                className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-500"
+              >
+                Delete {selected.size}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setEditing(null);
+                setMode("edit");
+              }}
+              className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500"
+            >
+              + New question
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {error && <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {loaded && rows.length === 0 ? (
+            <div className="mt-16 text-center text-sm text-neutral-400">
+              No questions match — adjust the filters, create one, or drop .md files into the
+              vault's <code className="rounded bg-neutral-100 px-1 dark:bg-neutral-800">questions/</code>{" "}
+              folder.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {rows.map((row) => (
+                <QuestionCard
+                  key={row.id}
+                  row={row}
+                  selected={selected.has(row.id)}
+                  onSelect={(on) =>
+                    setSelected((prev) => {
+                      const next = new Set(prev);
+                      if (on) next.add(row.id);
+                      else next.delete(row.id);
+                      return next;
+                    })
+                  }
+                  onEdit={async () => {
+                    try {
+                      setEditing({ row, doc: await openDoc(row) });
+                      setMode("edit");
+                    } catch (e) {
+                      alert(`Could not open ${row.path}: ${e}`);
+                    }
+                  }}
+                  onDelete={async () => {
+                    if (confirm(`Delete "${row.title ?? row.id}"? The .md file will be removed.`)) {
+                      await removeMany([row]);
+                    }
+                  }}
+                  openDoc={openDoc}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -83,11 +142,15 @@ export function QuestionsView() {
 
 function QuestionCard({
   row,
+  selected,
+  onSelect,
   onEdit,
   onDelete,
   openDoc,
 }: {
   row: QuestionRow;
+  selected: boolean;
+  onSelect(on: boolean): void;
   onEdit(): void;
   onDelete(): void;
   openDoc(row: QuestionRow): Promise<QuestionDoc>;
@@ -109,9 +172,21 @@ function QuestionCard({
   };
 
   return (
-    <li className="rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+    <li
+      className={`rounded-lg border bg-white dark:bg-neutral-900 ${
+        selected
+          ? "border-blue-400 dark:border-blue-700"
+          : "border-neutral-200 dark:border-neutral-800"
+      }`}
+    >
       {/* Card header */}
       <div className="flex cursor-pointer items-center gap-2 px-3 py-2" onClick={toggle}>
+        <input
+          type="checkbox"
+          checked={selected}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => onSelect(e.target.checked)}
+        />
         <span className="flex-1 truncate text-sm">{row.title ?? row.id}</span>
         {row.difficulty !== null && (
           <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
