@@ -1,0 +1,100 @@
+import { describe, expect, it } from "vitest";
+import { parseQuestionFile, serializeQuestionFile, newQuestionMeta, FormatError } from "./format";
+
+const SAMPLE = `---
+id: 01J8XTESTULID0000000000000
+schemaVersion: 1
+type: question
+body: math
+difficulty: 3
+tags: [mechanics, projectile]
+source: "Halliday & Resnick Ch.4 Q17"
+recall: both
+created: 2026-07-05
+futureKey: some value the app does not know yet
+---
+
+# Question
+A projectile is launched at $30^\\circ$ with speed $v_0$.
+
+![setup](../../attachments/proj-01.png)
+
+# Answer
+$R = \\dfrac{v_0^2 \\sin 2\\theta}{g}$
+
+# Hint
+Split into $x$ and $y$ components.
+`;
+
+describe("parseQuestionFile", () => {
+  it("parses frontmatter and sections", () => {
+    const doc = parseQuestionFile(SAMPLE);
+    expect(doc.meta.id).toBe("01J8XTESTULID0000000000000");
+    expect(doc.meta.body).toBe("math");
+    expect(doc.meta.difficulty).toBe(3);
+    expect(doc.meta.tags).toEqual(["mechanics", "projectile"]);
+    expect(doc.question).toContain("projectile is launched");
+    expect(doc.question).toContain("![setup]");
+    expect(doc.answer).toContain("\\sin 2\\theta");
+    expect(doc.hint).toContain("components");
+    expect(doc.solution).toBeUndefined();
+  });
+
+  it("preserves unknown frontmatter keys (forward compat)", () => {
+    const doc = parseQuestionFile(SAMPLE);
+    expect(doc.meta.futureKey).toBe("some value the app does not know yet");
+  });
+
+  it("defaults missing optional keys leniently", () => {
+    const doc = parseQuestionFile(`---\nid: abc\n---\n# Question\nhi`);
+    expect(doc.meta.body).toBe("text");
+    expect(doc.meta.recall).toBe("both");
+    expect(doc.meta.tags).toEqual([]);
+    expect(doc.meta.difficulty).toBeUndefined();
+  });
+
+  it("rejects out-of-range and non-integer difficulty", () => {
+    expect(
+      parseQuestionFile(`---\nid: a\ndifficulty: 9\n---\n# Question\nq`).meta.difficulty,
+    ).toBeUndefined();
+    expect(
+      parseQuestionFile(`---\nid: a\ndifficulty: 3.5\n---\n# Question\nq`).meta.difficulty,
+    ).toBeUndefined();
+  });
+
+  it("throws on missing frontmatter / question section / id", () => {
+    expect(() => parseQuestionFile("# Question\nhi")).toThrow(FormatError);
+    expect(() => parseQuestionFile("---\nid: x\n---\n# Answer\nfoo")).toThrow(FormatError);
+    expect(() => parseQuestionFile("---\ntype: question\n---\n# Question\nq")).toThrow(FormatError);
+  });
+
+  it("rejects non-question files", () => {
+    expect(() => parseQuestionFile("---\nid: x\ntype: note\n---\n# Question\nq")).toThrow(
+      FormatError,
+    );
+  });
+});
+
+describe("round-trip", () => {
+  it("parse → serialize → parse is stable", () => {
+    const doc = parseQuestionFile(SAMPLE);
+    const doc2 = parseQuestionFile(serializeQuestionFile(doc));
+    expect(doc2).toEqual(doc);
+  });
+
+  it("serializes a new question with defaults", () => {
+    const meta = newQuestionMeta("01TESTNEWID");
+    const text = serializeQuestionFile({ meta, question: "What is $2+2$?", answer: "4" });
+    const doc = parseQuestionFile(text);
+    expect(doc.meta.id).toBe("01TESTNEWID");
+    expect(doc.meta.schemaVersion).toBe(1);
+    expect(doc.question).toBe("What is $2+2$?");
+    expect(doc.answer).toBe("4");
+  });
+
+  it("omits empty sections", () => {
+    const text = serializeQuestionFile({ meta: newQuestionMeta("x"), question: "q" });
+    expect(text).not.toContain("# Answer");
+    expect(text).not.toContain("# Hint");
+  });
+});
