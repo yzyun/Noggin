@@ -1,0 +1,6 @@
+question,answer,hint,difficulty,tags,subject,source
+"Solve $x^2 - 5x + 6 = 0$.","$x = 2$ or $x = 3$","Factor the quadratic.",2,"algebra, quadratics",math/algebra,Sample pack
+"Differentiate $f(x) = x^2 \sin x$.","$f'(x) = 2x\sin x + x^2\cos x$","Product rule.",3,"calculus, differentiation",math/calculus,Sample pack
+"State Hooke's law for a spring.","$F = -kx$, where $k$ is the spring constant.",,1,"mechanics, oscillations",physics/mechanics,Sample pack
+"A capacitor of capacitance $C$ is charged to voltage $V$. How much energy is stored?","$E = \frac{1}{2}CV^2$","Integrate $q/C$ as charge builds from 0 to $Q$.",2,"electricity, capacitors",physics/electricity,Sample pack
+"Evaluate $$\int_0^{\pi} \sin^2 x \, dx$$","$\pi/2$","Use $\sin^2 x = \frac{1 - \cos 2x}{2}$.",3,"calculus, integration",math/calculus,Sample pack

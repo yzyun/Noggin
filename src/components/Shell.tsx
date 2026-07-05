@@ -9,6 +9,7 @@ import { startVaultWatch } from "../lib/watch";
 import { QuestionsView } from "./QuestionsView";
 import { NotesView } from "./NotesView";
 import { ReviewView } from "./ReviewView";
+import { ImportView } from "./ImportView";
 
 const NAV = [
   { id: "questions", label: "Questions", hint: "Browse & edit (Phase 1–2)" },
@@ -94,6 +95,8 @@ export function Shell() {
           <NotesView />
         ) : active === "review" ? (
           <ReviewView />
+        ) : active === "import" ? (
+          <ImportView />
         ) : (
           <div className="flex h-full items-center justify-center">
             {NAV.filter((n) => n.id === active).map((n) => (

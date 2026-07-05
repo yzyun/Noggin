@@ -75,6 +75,39 @@ Horizontal distance: $R = v_0 \cos\theta \cdot t = \dfrac{v_0^2 \sin 2\theta}{g}
 Maximum at $\theta = 45^\circ$.
 ```
 
+## Alternative: tabular import (CSV / Excel / JSON)
+
+Noggin's Import tab also accepts tables. Canonical column/key names (all optional except
+`question`; the app lets you re-map columns manually, and unknown columns are ignored):
+
+| Column / JSON key | Content |
+|---|---|
+| `question` | Markdown + `$…$` math (required) |
+| `answer` | Short answer |
+| `hint` | Nudge shown before the answer |
+| `solution` | Full worked solution |
+| `difficulty` | Integer 1–5 |
+| `tags` | Comma/semicolon-separated string, or a JSON array |
+| `source` | Origin reference |
+| `subject` | Folder path, e.g. `mechanics/kinematics` |
+
+JSON example:
+
+```json
+[
+  {
+    "question": "Solve $x^2 - 5x + 6 = 0$.",
+    "answer": "$x = 2$ or $x = 3$",
+    "difficulty": 2,
+    "tags": ["algebra", "quadratics"],
+    "subject": "math/algebra"
+  }
+]
+```
+
+Rows with an empty question or a non-integer difficulty are rejected in the preview;
+duplicate questions (same text, or matching an existing question) are skipped by default.
+
 ## Rules for generators (AIs / scrapers)
 
 1. Emit **one file per question**; filename: lowercase words joined by `-`, ending in `.md`

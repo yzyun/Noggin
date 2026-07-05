@@ -43,6 +43,8 @@ interface QuestionsStore {
   /** Reconcile the index with the files on disk (mtime-skip, prune stale). */
   rescan(): Promise<void>;
   save(doc: QuestionDoc, folder: string, existingPath?: string): Promise<string>;
+  /** Bulk import: write many docs, then refresh once. Returns count written. */
+  importMany(items: { doc: QuestionDoc; folder: string }[]): Promise<number>;
   openDoc(row: QuestionRow): Promise<QuestionDoc>;
   remove(row: QuestionRow): Promise<void>;
   removeMany(rows: QuestionRow[]): Promise<void>;
@@ -184,6 +186,19 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
     await get().load();
     void useVault.getState().refreshStats();
     return path;
+  },
+
+  async importMany(items) {
+    let written = 0;
+    for (const { doc, folder } of items) {
+      const path = questionPath(doc, folder);
+      await ipc.writeFile(path, serializeQuestionFile(doc));
+      await indexFile(path, Math.floor(Date.now() / 1000));
+      written++;
+    }
+    await get().load();
+    void useVault.getState().refreshStats();
+    return written;
   },
 
   async openDoc(row) {
