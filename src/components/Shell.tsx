@@ -4,6 +4,8 @@
 import { useState } from "react";
 import { useVault } from "../state/vault";
 import { toggleTheme } from "../lib/theme";
+import { QuestionsView } from "./QuestionsView";
+import { NotesView } from "./NotesView";
 
 const NAV = [
   { id: "questions", label: "Questions", hint: "Browse & edit (Phase 1–2)" },
@@ -70,13 +72,21 @@ export function Shell() {
       </aside>
 
       {/* Content */}
-      <main className="flex flex-1 items-center justify-center overflow-auto">
-        {NAV.filter((n) => n.id === active).map((n) => (
-          <div key={n.id} className="text-center">
-            <h2 className="text-xl font-semibold">{n.label}</h2>
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{n.hint}</p>
+      <main className="min-w-0 flex-1 overflow-hidden">
+        {active === "questions" ? (
+          <QuestionsView />
+        ) : active === "notes" ? (
+          <NotesView />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            {NAV.filter((n) => n.id === active).map((n) => (
+              <div key={n.id} className="text-center">
+                <h2 className="text-xl font-semibold">{n.label}</h2>
+                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{n.hint}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </main>
     </div>
   );

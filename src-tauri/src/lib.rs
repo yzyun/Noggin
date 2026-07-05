@@ -1,5 +1,6 @@
 mod db;
 mod error;
+mod index;
 mod vault;
 mod watcher;
 
@@ -22,6 +23,10 @@ pub fn run() {
             vault::vault_read_binary,
             vault::vault_remove_file,
             vault::vault_list,
+            index::index_upsert_question,
+            index::index_remove_question,
+            index::index_list_questions,
+            index::index_get_question,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

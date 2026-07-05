@@ -36,12 +36,12 @@ export interface QuestionDoc {
   solution?: string;
 }
 
-/** Row shape of the SQLite `questions` index table (subset the UI needs). */
-export interface QuestionIndexRow {
+/** Row shape returned by the Rust index commands (wire format, snake_case). */
+export interface QuestionRow {
   id: string;
   path: string;
   title: string | null;
-  bodyKind: BodyKind;
+  body_kind: BodyKind;
   difficulty: number | null;
   folder: string;
   source: string | null;

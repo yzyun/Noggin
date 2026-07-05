@@ -133,6 +133,17 @@ export function newQuestionMeta(id: string, overrides: Partial<QuestionMeta> = {
   };
 }
 
+/** Classify a question's content. The editor no longer asks — text, LaTeX
+ *  and images all live in one markdown box, and the kind is derived:
+ *  image-dominant → image, contains math → math, else text. */
+export function deriveBodyKind(question: string): BodyKind {
+  const withoutImages = question.replace(/!\[[^\]]*\]\([^)]*\)/g, "").trim();
+  const hasImage = withoutImages.length !== question.trim().length;
+  if (hasImage && withoutImages.length < 40) return "image";
+  if (/\$\$[\s\S]+?\$\$|\$[^$\n]+\$/.test(question)) return "math";
+  return "text";
+}
+
 function splitSections(body: string): Map<SectionName, string> {
   const out = new Map<SectionName, string>();
   const matches = [...body.matchAll(SECTION_RE)];
