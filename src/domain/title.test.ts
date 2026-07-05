@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { deriveTitle, slugify } from "./title";
+import { deriveTitle, effectiveTitle, slugify } from "./title";
+
+describe("effectiveTitle", () => {
+  it("prefers the explicit title", () => {
+    expect(effectiveTitle("My title", "Some question")).toBe("My title");
+  });
+  it("falls back to the derived title when blank or missing", () => {
+    expect(effectiveTitle("   ", "Some question")).toBe("Some question");
+    expect(effectiveTitle(undefined, "Some question")).toBe("Some question");
+  });
+});
 
 describe("deriveTitle", () => {
   it("takes the first meaningful line, stripped of markup", () => {

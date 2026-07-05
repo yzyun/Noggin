@@ -18,6 +18,7 @@ Each question is a single UTF-8 Markdown file (`.md`) with:
 | `id` | **yes** | string | Unique identity. ULID recommended (26 chars, sortable), but any globally-unique string works. Never reuse or change it. |
 | `schemaVersion` | recommended | integer | Format version. Currently `1`. |
 | `type` | recommended | string | Must be `question` (files with another `type` are ignored). |
+| `title` | optional | string | Display title shown in lists. If omitted, one is derived from the question's first line. |
 | `body` | optional | `text` \| `math` \| `image` | Dominant content kind. Auto-derived if omitted. |
 | `difficulty` | optional | integer 1–5 | 1 = easiest, 5 = hardest. Non-integers are ignored. |
 | `tags` | optional | list of strings | Topic tags, e.g. `[mechanics, projectile]`. |
@@ -83,6 +84,7 @@ Noggin's Import tab also accepts tables. Canonical column/key names (all optiona
 | Column / JSON key | Content |
 |---|---|
 | `question` | Markdown + `$…$` math (required) |
+| `title` | Display title (auto-derived when blank) |
 | `answer` | Short answer |
 | `hint` | Nudge shown before the answer |
 | `solution` | Full worked solution |

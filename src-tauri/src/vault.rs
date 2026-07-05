@@ -217,6 +217,98 @@ pub fn vault_list(state: State<'_, AppState>, rel: String) -> Result<Vec<DirEntr
     })
 }
 
+/// Create a folder (and any missing parents) inside the vault.
+#[tauri::command]
+pub fn vault_create_dir(state: State<'_, AppState>, rel: String) -> Result<()> {
+    with_vault(&state, |v| Ok(fs::create_dir_all(resolve(&v.root, &rel)?)?))
+}
+
+/// Rename/move a folder (or file). Creates the destination's parent dirs.
+/// Moving a folder into itself is rejected.
+#[tauri::command]
+pub fn vault_rename(state: State<'_, AppState>, from: String, to: String) -> Result<()> {
+    with_vault(&state, |v| {
+        let from_n = from.trim_matches('/');
+        let to_n = to.trim_matches('/');
+        if to_n == from_n || to_n.starts_with(&format!("{from_n}/")) {
+            return Err(Error::msg("cannot move a folder into itself"));
+        }
+        let src = resolve(&v.root, from_n)?;
+        let dst = resolve(&v.root, to_n)?;
+        if dst.exists() {
+            return Err(Error::msg(format!("'{to_n}' already exists")));
+        }
+        if let Some(parent) = dst.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        Ok(fs::rename(src, dst)?)
+    })
+}
+
+/// Delete a folder. Its contents (questions and subfolders) are moved up
+/// into the parent folder first, so nothing is ever lost. Name collisions
+/// get a numeric suffix.
+#[tauri::command]
+pub fn vault_delete_folder(state: State<'_, AppState>, rel: String) -> Result<()> {
+    with_vault(&state, |v| {
+        let rel_n = rel.trim_matches('/');
+        let dir = resolve(&v.root, rel_n)?;
+        if !dir.is_dir() {
+            return Err(Error::msg(format!("'{rel_n}' is not a folder")));
+        }
+        let parent = dir
+            .parent()
+            .ok_or_else(|| Error::msg("cannot delete the vault root"))?
+            .to_path_buf();
+
+        for entry in fs::read_dir(&dir)? {
+            let entry = entry?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let mut target = parent.join(&name);
+            // Collision-safe: foo.md → foo-1.md, subdir → subdir-1
+            let (stem, ext) = match name.rsplit_once('.') {
+                Some((s, e)) if entry.path().is_file() => (s.to_string(), format!(".{e}")),
+                _ => (name.clone(), String::new()),
+            };
+            let mut n = 0;
+            while target.exists() {
+                n += 1;
+                target = parent.join(format!("{stem}-{n}{ext}"));
+            }
+            fs::rename(entry.path(), target)?;
+        }
+        Ok(fs::remove_dir(dir)?)
+    })
+}
+
+/// All folders (recursive) under a vault directory. Skips dot-dirs.
+#[tauri::command]
+pub fn vault_list_dirs(state: State<'_, AppState>, rel: String) -> Result<Vec<String>> {
+    with_vault(&state, |v| {
+        let root = resolve(&v.root, &rel)?;
+        let mut out = Vec::new();
+        let mut stack = vec![(root, String::new())];
+        while let Some((dir, prefix)) = stack.pop() {
+            let Ok(entries) = fs::read_dir(&dir) else { continue };
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if name.starts_with('.') || !entry.path().is_dir() {
+                    continue;
+                }
+                let rel_child = if prefix.is_empty() {
+                    name.clone()
+                } else {
+                    format!("{prefix}/{name}")
+                };
+                out.push(rel_child.clone());
+                stack.push((entry.path(), rel_child));
+            }
+        }
+        out.sort();
+        Ok(out)
+    })
+}
+
 /// Recursively list files under a vault directory, optionally filtered by
 /// extension (e.g. "md"). Used for rescans. Skips dot-directories.
 #[tauri::command]

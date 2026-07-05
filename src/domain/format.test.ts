@@ -51,6 +51,19 @@ describe("parseQuestionFile", () => {
     expect(doc.meta.futureKey).toBe("some value the app does not know yet");
   });
 
+  it("parses an explicit title and round-trips it", () => {
+    const raw = `---\nid: t1\ntitle: Projectile range\n---\n# Question\nFind $R$.`;
+    const doc = parseQuestionFile(raw);
+    expect(doc.meta.title).toBe("Projectile range");
+    const doc2 = parseQuestionFile(serializeQuestionFile(doc));
+    expect(doc2.meta.title).toBe("Projectile range");
+  });
+
+  it("treats a blank title as absent", () => {
+    const doc = parseQuestionFile(`---\nid: t2\ntitle: "  "\n---\n# Question\nq`);
+    expect(doc.meta.title).toBeUndefined();
+  });
+
   it("defaults missing optional keys leniently", () => {
     const doc = parseQuestionFile(`---\nid: abc\n---\n# Question\nhi`);
     expect(doc.meta.body).toBe("text");

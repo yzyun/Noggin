@@ -1,6 +1,12 @@
 // Deriving a display title and a filename slug from question markdown.
 // Pure functions — unit-tested alongside format.ts.
 
+/** The title shown in lists: the user's explicit title if set, otherwise
+ *  derived from the question text. */
+export function effectiveTitle(explicit: string | undefined, questionMarkdown: string): string {
+  return explicit?.trim() || deriveTitle(questionMarkdown);
+}
+
 /** First meaningful line of the question, stripped to plain-ish text. */
 export function deriveTitle(questionMarkdown: string, maxLen = 80): string {
   for (const rawLine of questionMarkdown.split("\n")) {

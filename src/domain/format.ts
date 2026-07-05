@@ -55,6 +55,10 @@ export function parseQuestionFile(raw: string): QuestionDoc {
   const meta: QuestionMeta = {
     ...rawMeta,
     id: rawMeta.id,
+    title:
+      typeof rawMeta.title === "string" && rawMeta.title.trim()
+        ? rawMeta.title.trim()
+        : undefined,
     schemaVersion:
       typeof rawMeta.schemaVersion === "number" ? rawMeta.schemaVersion : SCHEMA_VERSION,
     type: "question",
@@ -99,6 +103,7 @@ export function serializeQuestionFile(doc: QuestionDoc): string {
     "id",
     "schemaVersion",
     "type",
+    "title",
     "body",
     "difficulty",
     "tags",

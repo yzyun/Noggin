@@ -28,6 +28,7 @@ const RECALL_MODES: { id: RecallMode; label: string }[] = [
 export function QuestionEditor({ editing, onClose }: Props) {
   const { save, allTags, recentFolders } = useQuestions();
 
+  const [title, setTitle] = useState(editing?.doc.meta.title ?? "");
   const [question, setQuestion] = useState(editing?.doc.question ?? "");
   const [answer, setAnswer] = useState(editing?.doc.answer ?? "");
   const [hint, setHint] = useState(editing?.doc.hint ?? "");
@@ -49,6 +50,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
   const [resetKey, setResetKey] = useState(0);
 
   const clearContent = useCallback(() => {
+    setTitle("");
     setQuestion("");
     setAnswer("");
     setHint("");
@@ -73,6 +75,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
     const meta = editing
       ? {
           ...editing.doc.meta,
+          title: title.trim() || undefined,
           body,
           difficulty: difficulty ?? undefined,
           tags,
@@ -80,6 +83,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
           recall,
         }
       : newQuestionMeta(newId(), {
+          title: title.trim() || undefined,
           body,
           difficulty: difficulty ?? undefined,
           tags,
@@ -93,7 +97,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
       hint: hint.trim() || undefined,
       solution: solution.trim() || undefined,
     };
-  }, [editing, difficulty, tags, source, recall, question, answer, hint, solution]);
+  }, [editing, title, difficulty, tags, source, recall, question, answer, hint, solution]);
 
   const handleSave = useCallback(async () => {
     if (!question.trim()) {
@@ -179,6 +183,18 @@ export function QuestionEditor({ editing, onClose }: Props) {
       <div className="flex min-h-0 flex-1">
         {/* Form */}
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              Title (optional — shown in lists; auto-generated from the question if blank)
+            </span>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Projectile range at 30°"
+              className="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
+            />
+          </label>
+
           {/* Metadata row */}
           <div className="grid grid-cols-2 gap-3">
             <label className="block">

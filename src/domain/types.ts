@@ -13,6 +13,8 @@ export interface QuestionMeta {
   id: string;
   schemaVersion: number;
   type: "question";
+  /** Optional display title; when absent the UI derives one from the question text. */
+  title?: string;
   body: BodyKind;
   difficulty?: number; // 1–5
   tags: string[];

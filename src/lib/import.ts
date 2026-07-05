@@ -74,6 +74,7 @@ export function parseJson(text: string): ParsedTable {
 
 export const TARGET_FIELDS = [
   "question",
+  "title",
   "answer",
   "hint",
   "solution",
@@ -89,6 +90,7 @@ export type Mapping = Record<TargetField, number | null>;
 
 const HEADER_HINTS: Record<TargetField, RegExp> = {
   question: /question|prompt|problem|front|body/i,
+  title: /^title|^name|heading/i,
   answer: /^answer|back|solution_short|result/i,
   hint: /hint|clue/i,
   solution: /^solution|worked|working|explanation/i,
@@ -187,15 +189,17 @@ export function buildStagedRows(
     }
 
     // Duplicates: same normalized question text within the file or an
-    // existing question with the same derived title.
+    // existing question with the same (explicit or derived) title.
+    const explicitTitle = cell(row, "title") || undefined;
     const normalized = question.toLowerCase().replace(/\s+/g, " ");
-    const title = deriveTitle(question).toLowerCase();
+    const title = (explicitTitle ?? deriveTitle(question)).toLowerCase();
     const isDup = seenInFile.has(normalized) || existingTitles.has(title);
     seenInFile.add(normalized);
 
     const tags = [...new Set([...splitTags(cell(row, "tags")), ...defaults.tags])];
     const doc: QuestionDoc = {
       meta: newQuestionMeta(newId(), {
+        title: explicitTitle,
         body: deriveBodyKind(question),
         difficulty,
         tags,

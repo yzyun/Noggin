@@ -70,6 +70,11 @@ export const ipc = {
   listRecursive: (rel: string, ext?: string) =>
     invoke<DirEntry[]>("vault_list_recursive", { rel, ext: ext ?? null }),
 
+  createDir: (rel: string) => invoke<void>("vault_create_dir", { rel }),
+  renamePath: (from: string, to: string) => invoke<void>("vault_rename", { from, to }),
+  deleteFolder: (rel: string) => invoke<void>("vault_delete_folder", { rel }),
+  listDirs: (rel: string) => invoke<string[]>("vault_list_dirs", { rel }),
+
   cardsDue: (params: SearchParams, now: string, limit: number) =>
     invoke<DueEntry[]>("cards_due", { params, now, limit }),
   cardUpdate: (card: CardRow) => invoke<void>("card_update", { card }),

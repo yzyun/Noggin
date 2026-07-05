@@ -36,7 +36,17 @@ function countIn(rows: QuestionRow[], folder: string): number {
 }
 
 export function FilterPanel() {
-  const { filters, setFilters, clearFilters, allRows, allTags } = useQuestions();
+  const {
+    filters,
+    setFilters,
+    clearFilters,
+    allRows,
+    allTags,
+    folderDirs,
+    createFolder,
+    renameFolder,
+    deleteFolder,
+  } = useQuestions();
   const [searchDraft, setSearchDraft] = useState(filters.text);
 
   // Debounced search box.
@@ -47,11 +57,40 @@ export function FilterPanel() {
     return () => clearTimeout(t);
   }, [searchDraft, filters.text, setFilters]);
 
+  // Real directories (includes empty folders) ∪ folders referenced by rows.
   const tree = useMemo(
-    () => buildFolderTree([...new Set(allRows.map((r) => r.folder).filter(Boolean))]),
-    [allRows],
+    () =>
+      buildFolderTree([
+        ...new Set([...folderDirs, ...allRows.map((r) => r.folder).filter(Boolean)]),
+      ]),
+    [folderDirs, allRows],
   );
   const tags = allTags();
+
+  const promptCreate = (parent?: string) => {
+    const name = prompt(
+      parent ? `New folder inside "${parent}":` : "New folder (nest with /):",
+    )?.trim();
+    if (!name) return;
+    void createFolder(parent ? `${parent}/${name}` : name).catch((e) => alert(String(e)));
+  };
+
+  const promptRename = (path: string) => {
+    const next = prompt(
+      "Rename / move folder (edit the full path to move it):",
+      path,
+    )?.trim();
+    if (!next || next === path) return;
+    void renameFolder(path, next).catch((e) => alert(String(e)));
+  };
+
+  const confirmDelete = (path: string) => {
+    const n = countIn(allRows, path);
+    const msg = n
+      ? `Delete folder "${path}"? Its ${n} question${n > 1 ? "s" : ""} (and any subfolders) move up to the parent — nothing is lost.`
+      : `Delete empty folder "${path}"?`;
+    if (confirm(msg)) void deleteFolder(path).catch((e) => alert(String(e)));
+  };
 
   const hasFilters =
     filters.text ||
@@ -63,18 +102,47 @@ export function FilterPanel() {
 
   const FolderRow = ({ node, depth }: { node: FolderNode; depth: number }) => (
     <>
-      <button
-        onClick={() => setFilters({ folder: filters.folder === node.path ? null : node.path })}
-        className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs ${
+      <div
+        className={`group flex w-full items-center gap-1 rounded pr-1 text-xs ${
           filters.folder === node.path
             ? "bg-blue-100 font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200"
             : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
         }`}
-        style={{ paddingLeft: `${8 + depth * 12}px` }}
       >
-        <span className="truncate">📁 {node.name}</span>
-        <span className="text-neutral-400">{countIn(allRows, node.path)}</span>
-      </button>
+        <button
+          onClick={() => setFilters({ folder: filters.folder === node.path ? null : node.path })}
+          className="flex min-w-0 flex-1 items-center justify-between py-1 text-left"
+          style={{ paddingLeft: `${8 + depth * 12}px` }}
+        >
+          <span className="truncate">📁 {node.name}</span>
+          <span className="pl-1 text-neutral-400 group-hover:hidden">
+            {countIn(allRows, node.path)}
+          </span>
+        </button>
+        <span className="hidden shrink-0 gap-0.5 group-hover:flex">
+          <button
+            onClick={() => promptCreate(node.path)}
+            title="New subfolder"
+            className="rounded px-1 text-neutral-400 hover:text-blue-600"
+          >
+            +
+          </button>
+          <button
+            onClick={() => promptRename(node.path)}
+            title="Rename / move"
+            className="rounded px-1 text-neutral-400 hover:text-blue-600"
+          >
+            ✎
+          </button>
+          <button
+            onClick={() => confirmDelete(node.path)}
+            title="Delete folder"
+            className="rounded px-1 text-neutral-400 hover:text-red-600"
+          >
+            ×
+          </button>
+        </span>
+      </div>
       {node.children.map((c) => (
         <FolderRow key={c.path} node={c} depth={depth + 1} />
       ))}
@@ -95,6 +163,13 @@ export function FilterPanel() {
       <div>
         <div className="mb-1 flex items-center justify-between">
           <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">Folders</span>
+          <button
+            onClick={() => promptCreate()}
+            title="New folder"
+            className="rounded border border-neutral-300 px-1.5 text-xs text-neutral-500 hover:bg-neutral-100 hover:text-blue-600 dark:border-neutral-700 dark:hover:bg-neutral-800"
+          >
+            +
+          </button>
         </div>
         <button
           onClick={() => setFilters({ folder: null })}

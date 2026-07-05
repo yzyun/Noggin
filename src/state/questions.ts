@@ -5,7 +5,7 @@
 import { create } from "zustand";
 import { ipc } from "../lib/ipc";
 import { deriveBodyKind, parseQuestionFile, serializeQuestionFile } from "../domain/format";
-import { deriveTitle, slugify } from "../domain/title";
+import { effectiveTitle, slugify } from "../domain/title";
 import type { BodyKind, QuestionDoc, QuestionRow } from "../domain/types";
 import { useVault } from "./vault";
 
@@ -31,6 +31,8 @@ interface QuestionsStore {
   rows: QuestionRow[];
   /** Rows matching no filters — used for folder/tag option lists + counts. */
   allRows: QuestionRow[];
+  /** Real directories under questions/ (includes empty folders). */
+  folderDirs: string[];
   filters: Filters;
   loaded: boolean;
   scanning: boolean;
@@ -45,6 +47,12 @@ interface QuestionsStore {
   save(doc: QuestionDoc, folder: string, existingPath?: string): Promise<string>;
   /** Bulk import: write many docs, then refresh once. Returns count written. */
   importMany(items: { doc: QuestionDoc; folder: string }[]): Promise<number>;
+
+  createFolder(path: string): Promise<void>;
+  /** Rename or move a folder (new path may have a different parent). */
+  renameFolder(from: string, to: string): Promise<void>;
+  /** Delete a folder; its contents move up to the parent. */
+  deleteFolder(path: string): Promise<void>;
   openDoc(row: QuestionRow): Promise<QuestionDoc>;
   remove(row: QuestionRow): Promise<void>;
   removeMany(rows: QuestionRow[]): Promise<void>;
@@ -57,7 +65,7 @@ interface QuestionsStore {
 
 function questionPath(doc: QuestionDoc, folder: string): string {
   const dir = folder.replace(/^\/+|\/+$/g, "");
-  const slug = slugify(deriveTitle(doc.question));
+  const slug = slugify(effectiveTitle(doc.meta.title, doc.question));
   const suffix = doc.meta.id.slice(-6).toLowerCase();
   return `questions/${dir ? `${dir}/` : ""}${slug}-${suffix}.md`;
 }
@@ -86,7 +94,7 @@ async function indexFile(rel: string, mtime: number): Promise<boolean> {
   await ipc.upsertQuestion({
     id: doc.meta.id,
     path: rel,
-    title: deriveTitle(doc.question),
+    title: effectiveTitle(doc.meta.title, doc.question),
     body_kind: doc.meta.body ?? deriveBodyKind(doc.question),
     difficulty: doc.meta.difficulty ?? null,
     folder,
@@ -104,6 +112,7 @@ async function indexFile(rel: string, mtime: number): Promise<boolean> {
 export const useQuestions = create<QuestionsStore>((set, get) => ({
   rows: [],
   allRows: [],
+  folderDirs: [],
   filters: EMPTY_FILTERS,
   loaded: false,
   scanning: false,
@@ -121,11 +130,12 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
 
   async load() {
     try {
-      const [rows, allRows] = await Promise.all([
+      const [rows, allRows, folderDirs] = await Promise.all([
         ipc.search(toSearchParams(get().filters)),
         ipc.listQuestions(),
+        ipc.listDirs("questions"),
       ]);
-      set({ rows, allRows, loaded: true, error: null });
+      set({ rows, allRows, folderDirs, loaded: true, error: null });
     } catch (e) {
       set({ error: String(e), loaded: true });
     }
@@ -150,8 +160,10 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
           await indexFile(f.rel, f.mtime);
         }
       }
-      // Files deleted/moved outside the app → prune their index rows.
-      for (const row of indexed) {
+      // Prune rows whose file no longer exists. Re-fetch first: a moved
+      // file was just re-upserted under a NEW path with the SAME id, and
+      // pruning from the stale snapshot would delete that fresh row.
+      for (const row of await ipc.listQuestions()) {
         if (!onDisk.has(row.path)) {
           await ipc.removeQuestion(row.id);
         }
@@ -218,19 +230,53 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
     void useVault.getState().refreshStats();
   },
 
+  async createFolder(path) {
+    const clean = path.replace(/^\/+|\/+$/g, "");
+    if (!clean) return;
+    await ipc.createDir(`questions/${clean}`);
+    await get().load();
+  },
+
+  async renameFolder(from, to) {
+    const cleanTo = to.replace(/^\/+|\/+$/g, "");
+    if (!cleanTo || cleanTo === from) return;
+    await ipc.renamePath(`questions/${from}`, `questions/${cleanTo}`);
+    // Follow the selection if the renamed folder (or an ancestor) was active.
+    const f = get().filters.folder;
+    if (f === from || f?.startsWith(`${from}/`)) {
+      set({ filters: { ...get().filters, folder: cleanTo + (f?.slice(from.length) ?? "") } });
+    }
+    await get().rescan();
+  },
+
+  async deleteFolder(path) {
+    await ipc.deleteFolder(`questions/${path}`);
+    const f = get().filters.folder;
+    if (f === path || f?.startsWith(`${path}/`)) {
+      set({ filters: { ...get().filters, folder: null } });
+    }
+    await get().rescan();
+  },
+
   allTags() {
     return [...new Set(get().allRows.flatMap((r) => r.tags))].sort((a, b) => a.localeCompare(b));
   },
 
   allFolders() {
-    return [...new Set(get().allRows.map((r) => r.folder).filter(Boolean))].sort();
+    return [
+      ...new Set([...get().allRows.map((r) => r.folder).filter(Boolean), ...get().folderDirs]),
+    ].sort();
   },
 
   recentFolders() {
-    // allRows is ordered newest-first, so first sighting = most recent use.
+    // allRows is ordered newest-first, so first sighting = most recent use;
+    // empty (never-used) folders follow alphabetically.
     const seen: string[] = [];
     for (const r of get().allRows) {
       if (r.folder && !seen.includes(r.folder)) seen.push(r.folder);
+    }
+    for (const d of get().folderDirs) {
+      if (!seen.includes(d)) seen.push(d);
     }
     return seen;
   },

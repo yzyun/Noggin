@@ -66,6 +66,8 @@ npm test                    # unit tests
 - **+ New question** (or `⌘N`): write the question and answer in Markdown. **Text and LaTeX
   mix freely** — `Solve $x^2-4=0$` renders live in the preview pane. `$…$` for inline math,
   `$$…$$` for display math (KaTeX).
+- Give the question an optional **title** for the browser list — leave it blank and Noggin
+  derives one from the question's first line.
 - **Images**: paste a screenshot straight into the text box, drag & drop onto it, or use the
   **image dropzone** under each field to browse files. Images are stored in `attachments/`
   and referenced from the markdown.
@@ -80,7 +82,10 @@ npm test                    # unit tests
 ### 🔍 Browse & search
 
 - **Folder tree** with per-subject counts — selecting a subject includes everything nested
-  under it.
+  under it. **Manage folders right in the tree**: the `+` button creates folders (nest with
+  `/`), and hovering a folder reveals `+` (new subfolder), `✎` (rename — edit the full path
+  to move it anywhere), and `×` (delete — its contents move up to the parent, nothing is
+  lost). Folders are real directories in the vault, so empty ones show up too.
 - Combinable filters: **tags** (AND), **difficulty range**, **content kind** (text/math/image),
   and a **search box** that matches substrings anywhere in the question, answer, source or
   tags ("synth" finds "photosynthesis").

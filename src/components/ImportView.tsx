@@ -21,6 +21,7 @@ import { TagInput } from "./fields/TagInput";
 
 const FIELD_LABELS: Record<TargetField, string> = {
   question: "Question *",
+  title: "Title",
   answer: "Answer",
   hint: "Hint",
   solution: "Solution",
