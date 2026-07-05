@@ -1,6 +1,6 @@
 // Questions section: filter panel + result list + bulk actions + editor.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
 import { useQuestions } from "../state/questions";
 import { useUi } from "../state/ui";
@@ -11,6 +11,7 @@ import { QuestionEditor } from "./QuestionEditor";
 export function QuestionsView() {
   const { rows, loaded, scanning, error, load, openDoc, removeMany } = useQuestions();
   const newQuestionSignal = useUi((s) => s.newQuestionSignal);
+  const focusQuestionId = useUi((s) => s.focusQuestionId);
   const [mode, setMode] = useState<"list" | "edit">("list");
   const [editing, setEditing] = useState<{ row: QuestionRow; doc: QuestionDoc } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -26,6 +27,11 @@ export function QuestionsView() {
       setMode("edit");
     }
   }, [newQuestionSignal]);
+
+  // ⌘P quick search picked a question: make sure we're on the list.
+  useEffect(() => {
+    if (focusQuestionId) setMode("list");
+  }, [focusQuestionId]);
 
   // Drop selections that fell out of the current result set.
   useEffect(() => {
@@ -55,7 +61,7 @@ export function QuestionsView() {
       <FilterPanel />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-800">
+        <div className="flex items-center justify-between gap-3 border-b border-edge px-4 py-2.5">
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
               <input
@@ -96,7 +102,7 @@ export function QuestionsView() {
                 setEditing(null);
                 setMode("edit");
               }}
-              className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500"
+              className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover"
             >
               + New question
             </button>
@@ -117,6 +123,7 @@ export function QuestionsView() {
                 <QuestionCard
                   key={row.id}
                   row={row}
+                  autoFocus={row.id === focusQuestionId}
                   selected={selected.has(row.id)}
                   onSelect={(on) =>
                     setSelected((prev) => {
@@ -152,6 +159,7 @@ export function QuestionsView() {
 
 function QuestionCard({
   row,
+  autoFocus,
   selected,
   onSelect,
   onEdit,
@@ -159,6 +167,8 @@ function QuestionCard({
   openDoc,
 }: {
   row: QuestionRow;
+  /** Set when ⌘P picked this question: expand + scroll into view. */
+  autoFocus?: boolean;
   selected: boolean;
   onSelect(on: boolean): void;
   onEdit(): void;
@@ -168,6 +178,7 @@ function QuestionCard({
   const [expanded, setExpanded] = useState(false);
   const [doc, setDoc] = useState<QuestionDoc | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
+  const liRef = useRef<HTMLLIElement>(null);
 
   const toggle = async () => {
     if (!expanded && !doc) {
@@ -181,12 +192,26 @@ function QuestionCard({
     setShowAnswer(false);
   };
 
+  useEffect(() => {
+    if (!autoFocus) return;
+    void (async () => {
+      try {
+        setDoc(await openDoc(row));
+        setExpanded(true);
+      } catch {
+        /* metadata only */
+      }
+      liRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      useUi.getState().clearFocusQuestion();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFocus]);
+
   return (
     <li
-      className={`rounded-lg border bg-white dark:bg-neutral-900 ${
-        selected
-          ? "border-blue-400 dark:border-blue-700"
-          : "border-neutral-200 dark:border-neutral-800"
+      ref={liRef}
+      className={`rounded-lg border bg-surface ${
+        selected || autoFocus ? "border-accent" : "border-edge"
       }`}
     >
       {/* Card header */}
@@ -211,7 +236,7 @@ function QuestionCard({
         {row.tags.slice(0, 3).map((t) => (
           <span
             key={t}
-            className="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+            className="rounded-full bg-accent-soft px-1.5 py-0.5 text-xs text-accent-text"
           >
             {t}
           </span>
@@ -238,7 +263,7 @@ function QuestionCard({
 
       {/* Expanded content */}
       {expanded && doc && (
-        <div className="space-y-3 border-t border-neutral-200 px-3 py-3 dark:border-neutral-800">
+        <div className="space-y-3 border-t border-edge px-3 py-3">
           <Markdown text={doc.question} />
           {doc.answer &&
             (showAnswer ? (
@@ -248,7 +273,7 @@ function QuestionCard({
             ) : (
               <button
                 onClick={() => setShowAnswer(true)}
-                className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
               >
                 Reveal answer
               </button>

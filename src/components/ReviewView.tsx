@@ -124,7 +124,7 @@ function Setup({
           {stats.upcoming.map(([day, n]) => (
             <div key={day} className="flex flex-col items-center gap-0.5">
               <div
-                className="w-8 rounded-t bg-blue-300 dark:bg-blue-800"
+                className="w-8 rounded-t bg-accent/60"
                 style={{ height: `${Math.min(60, 8 + n * 6)}px` }}
                 title={`${day}: ${n} due`}
               />
@@ -149,7 +149,7 @@ function Setup({
         <div className="flex items-end gap-4">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Mode</span>
-            <div className="flex overflow-hidden rounded-md border border-neutral-300 dark:border-neutral-700">
+            <div className="flex overflow-hidden rounded-md border border-edge">
               {(
                 [
                   ["auto", "Per question"],
@@ -162,8 +162,8 @@ function Setup({
                   onClick={() => setMode(m)}
                   className={`px-3 py-1.5 text-xs ${
                     mode === m
-                      ? "bg-blue-600 font-medium text-white"
-                      : "bg-white text-neutral-600 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                      ? "bg-accent font-medium text-on-accent"
+                      : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                   }`}
                 >
                   {label}
@@ -181,7 +181,7 @@ function Setup({
               max={500}
               value={limit}
               onChange={(e) => setLimit(Math.max(1, Number(e.target.value) || 20))}
-              className="w-20 rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+              className="w-20 rounded-md border border-edge bg-surface px-2 py-1.5 text-sm"
             />
           </label>
         </div>
@@ -190,7 +190,7 @@ function Setup({
       <button
         onClick={start}
         disabled={starting || !queueCount}
-        className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-40"
+        className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm transition hover:bg-accent-hover disabled:opacity-40"
       >
         {queueCount === null
           ? "…"
@@ -316,7 +316,7 @@ function Session({
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-800">
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2.5">
         <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
           <span className="font-medium text-neutral-700 dark:text-neutral-200">
             {doneCount + 1} / {queue.length}
@@ -327,7 +327,7 @@ function Session({
         </div>
         <button
           onClick={onEnd}
-          className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
         >
           End session (Esc)
         </button>
@@ -336,7 +336,7 @@ function Session({
       {/* Card */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl space-y-4 p-6">
-          <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="rounded-lg border border-edge bg-surface p-4">
             {doc ? <Markdown text={doc.question} /> : <p className="text-sm text-neutral-400">…</p>}
           </div>
 
@@ -365,7 +365,7 @@ function Session({
                 Your answer {revealed && "(as submitted)"}
               </span>
               {revealed ? (
-                <div className="rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                <div className="rounded-lg border border-edge bg-surface p-3">
                   {attempt.trim() ? <Markdown text={attempt} /> : <p className="text-sm text-neutral-400">(blank)</p>}
                 </div>
               ) : (
@@ -384,7 +384,7 @@ function Session({
           {!revealed ? (
             <button
               onClick={() => setRevealed(true)}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-500"
+              className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover"
             >
               {cardMode === "typein" ? "Check answer (⌘/Ctrl+Enter)" : "Show answer (Space)"}
             </button>
@@ -402,14 +402,14 @@ function Session({
               {doc?.solution && (
                 <div>
                   {showSolution ? (
-                    <div className="rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                    <div className="rounded-lg border border-edge bg-surface p-3">
                       <div className="mb-1 text-xs font-medium text-neutral-500">Solution</div>
                       <Markdown text={doc.solution} />
                     </div>
                   ) : (
                     <button
                       onClick={() => setShowSolution(true)}
-                      className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                      className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                     >
                       Show full solution
                     </button>
@@ -459,7 +459,7 @@ function Done({ summary, onBack }: { summary: Record<number, number>; onBack(): 
       </div>
       <button
         onClick={onBack}
-        className="mt-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-500"
+        className="mt-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover"
       >
         Back to review setup
       </button>

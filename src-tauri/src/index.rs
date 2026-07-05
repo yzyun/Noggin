@@ -124,8 +124,10 @@ pub fn index_list_questions(state: State<'_, AppState>) -> Result<Vec<QuestionRo
     })
 }
 
-/// Combinable filters for browsing the bank. All optional; AND semantics.
+/// Combinable filters for browsing the bank. All optional; AND semantics
+/// (except `folders`, which ORs its entries).
 #[derive(serde::Deserialize, Default)]
+#[serde(default)]
 pub struct SearchParams {
     /// Free-text query. Space-separated terms are ANDed; each term matches
     /// as a substring of title/question/answer/source/tags ("synth" finds
@@ -133,6 +135,8 @@ pub struct SearchParams {
     pub text: Option<String>,
     /// Folder path; matches the folder and everything nested under it.
     pub folder: Option<String>,
+    /// Multiple folders (OR of subtree matches) — used by the quiz builder.
+    pub folders: Vec<String>,
     /// Tags that must ALL be present.
     pub tags: Vec<String>,
     pub min_difficulty: Option<i64>,
@@ -151,6 +155,19 @@ pub(crate) fn push_filters(
         sql.push_str(" AND (q.folder = ? OR q.folder LIKE ? || '/%')");
         binds.push(Box::new(folder.to_string()));
         binds.push(Box::new(folder.to_string()));
+    }
+    if !params.folders.is_empty() {
+        let clause = params
+            .folders
+            .iter()
+            .map(|_| "(q.folder = ? OR q.folder LIKE ? || '/%')")
+            .collect::<Vec<_>>()
+            .join(" OR ");
+        sql.push_str(&format!(" AND ({clause})"));
+        for f in &params.folders {
+            binds.push(Box::new(f.clone()));
+            binds.push(Box::new(f.clone()));
+        }
     }
     for tag in &params.tags {
         sql.push_str(" AND EXISTS (SELECT 1 FROM json_each(q.tags) je WHERE je.value = ?)");

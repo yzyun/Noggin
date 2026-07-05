@@ -75,7 +75,7 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
           img: (props) => <VaultImage src={props.src as string} alt={props.alt} />,
           code: (props) => <Code className={props.className}>{props.children}</Code>,
           a: (props) => (
-            <a {...props} target="_blank" rel="noreferrer" className="text-blue-600 underline dark:text-blue-400" />
+            <a {...props} target="_blank" rel="noreferrer" className="text-accent underline" />
           ),
           h1: (props) => <h1 className="text-xl font-semibold" {...props} />,
           h2: (props) => <h2 className="text-lg font-semibold" {...props} />,
@@ -84,16 +84,16 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
           ol: (props) => <ol className="list-decimal pl-5" {...props} />,
           blockquote: (props) => (
             <blockquote
-              className="border-l-2 border-neutral-300 pl-3 text-neutral-600 dark:border-neutral-700 dark:text-neutral-400"
+              className="border-l-2 border-edge pl-3 text-neutral-600 dark:text-neutral-400"
               {...props}
             />
           ),
           table: (props) => <table className="border-collapse text-sm" {...props} />,
           th: (props) => (
-            <th className="border border-neutral-300 px-2 py-1 text-left dark:border-neutral-700" {...props} />
+            <th className="border border-edge px-2 py-1 text-left" {...props} />
           ),
           td: (props) => (
-            <td className="border border-neutral-300 px-2 py-1 dark:border-neutral-700" {...props} />
+            <td className="border border-edge px-2 py-1" {...props} />
           ),
         }}
       >

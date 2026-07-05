@@ -141,7 +141,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-800">
+      <div className="flex items-center justify-between border-b border-edge px-4 py-2.5">
         <h2 className="text-sm font-semibold">
           {editing ? "Edit question" : "New question"}
         </h2>
@@ -151,7 +151,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
           {!editing && (
             <button
               onClick={clearAll}
-              className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
               title="Clear content and all metadata"
             >
               Clear all
@@ -159,20 +159,20 @@ export function QuestionEditor({ editing, onClose }: Props) {
           )}
           <button
             onClick={() => setShowPreview((p) => !p)}
-            className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
             {showPreview ? "Hide preview" : "Show preview"}
           </button>
           <button
             onClick={onClose}
-            className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+            className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-50"
             title="Cmd/Ctrl+Enter"
           >
             {saving ? "Saving…" : editing ? "Save" : "Save & next"}
@@ -191,7 +191,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Projectile range at 30°"
-              className="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
+              className="w-full rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-accent"
             />
           </label>
 
@@ -207,7 +207,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 placeholder="e.g. Halliday & Resnick Ch.4 Q17"
-                className="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
+                className="w-full rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-accent"
               />
             </label>
           </div>
@@ -219,7 +219,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
             </div>
             <div>
               <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Recall</span>
-              <div className="flex overflow-hidden rounded-md border border-neutral-300 dark:border-neutral-700">
+              <div className="flex overflow-hidden rounded-md border border-edge">
                 {RECALL_MODES.map((m) => (
                   <button
                     key={m.id}
@@ -227,8 +227,8 @@ export function QuestionEditor({ editing, onClose }: Props) {
                     onClick={() => setRecall(m.id)}
                     className={`px-3 py-1.5 text-xs ${
                       recall === m.id
-                        ? "bg-blue-600 font-medium text-white"
-                        : "bg-white text-neutral-600 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        ? "bg-accent font-medium text-on-accent"
+                        : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                     }`}
                   >
                     {m.label}
@@ -298,11 +298,11 @@ export function QuestionEditor({ editing, onClose }: Props) {
 
         {/* Live preview */}
         {showPreview && (
-          <div className="w-2/5 shrink-0 overflow-y-auto border-l border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/50">
+          <div className="w-2/5 shrink-0 overflow-y-auto border-l border-edge bg-neutral-50 p-4 dark:bg-neutral-900/50">
             <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">Preview</div>
             {previewDoc.question ? (
               <div className="space-y-4">
-                <div className="rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                <div className="rounded-lg border border-edge bg-surface p-3">
                   <Markdown text={previewDoc.question} />
                 </div>
                 {previewDoc.answer && (
@@ -318,7 +318,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
                   </div>
                 )}
                 {previewDoc.solution && (
-                  <div className="rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                  <div className="rounded-lg border border-edge bg-surface p-3">
                     <div className="mb-1 text-xs font-medium text-neutral-500">Solution</div>
                     <Markdown text={previewDoc.solution} />
                   </div>

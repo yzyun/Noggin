@@ -2,7 +2,7 @@
 // palette (and future keyboard shortcuts / plugins) read from the registry.
 
 import { commands } from "../domain/registries";
-import { toggleTheme } from "./theme";
+import { setTheme, THEMES } from "./theme";
 import { useQuestions } from "../state/questions";
 import { useUi } from "../state/ui";
 import { useVault } from "../state/vault";
@@ -20,6 +20,12 @@ export function registerCoreCommands(): void {
     title: "New question",
     shortcut: "⌘N",
     run: () => ui().requestNewQuestion(),
+  });
+  commands.register({
+    id: "search-questions",
+    title: "Search questions…",
+    shortcut: "⌘P",
+    run: () => ui().openQuickSearch(),
   });
   commands.register({
     id: "go-questions",
@@ -40,22 +46,24 @@ export function registerCoreCommands(): void {
     run: () => ui().setView("review"),
   });
   commands.register({
-    id: "go-import",
-    title: "Go to Import",
-    shortcut: "⌘4",
-    run: () => ui().setView("import"),
-  });
-  commands.register({
     id: "go-quiz",
     title: "Go to Quiz",
-    shortcut: "⌘5",
+    shortcut: "⌘4",
     run: () => ui().setView("quiz"),
   });
   commands.register({
-    id: "toggle-theme",
-    title: "Toggle light/dark theme",
-    run: () => void toggleTheme(),
+    id: "go-import",
+    title: "Go to Import",
+    shortcut: "⌘5",
+    run: () => ui().setView("import"),
   });
+  for (const theme of THEMES) {
+    commands.register({
+      id: `theme-${theme.id}`,
+      title: `Theme: ${theme.label}`,
+      run: () => setTheme(theme.id),
+    });
+  }
   commands.register({
     id: "rescan-vault",
     title: "Rescan vault (re-index files)",
@@ -68,7 +76,7 @@ export function registerCoreCommands(): void {
   });
 }
 
-/** Global shortcut handling (palette itself is opened with ⌘K). */
+/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘1–5). */
 export function handleGlobalShortcut(e: KeyboardEvent): boolean {
   if (!(e.metaKey || e.ctrlKey)) return false;
   const key = e.key.toLowerCase();
@@ -76,11 +84,16 @@ export function handleGlobalShortcut(e: KeyboardEvent): boolean {
     useUi.getState().openPalette();
     return true;
   }
+  if (key === "p") {
+    // Also swallows the webview's print dialog.
+    useUi.getState().openQuickSearch();
+    return true;
+  }
   if (key === "n") {
     useUi.getState().requestNewQuestion();
     return true;
   }
-  const views = ["questions", "notes", "review", "import", "quiz"] as const;
+  const views = ["questions", "notes", "review", "quiz", "import"] as const;
   const idx = Number(e.key) - 1;
   if (idx >= 0 && idx < views.length && e.key === String(idx + 1)) {
     useUi.getState().setView(views[idx]);

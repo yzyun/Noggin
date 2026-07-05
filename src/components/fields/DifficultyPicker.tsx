@@ -16,7 +16,7 @@ export function DifficultyPicker({ value, onChange }: Props) {
           className={`h-8 w-8 rounded-md border text-sm font-medium transition ${
             value !== null && n <= value
               ? "border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-200"
-              : "border-neutral-300 text-neutral-400 hover:border-neutral-400 dark:border-neutral-700 dark:text-neutral-500"
+              : "border-edge text-neutral-400 hover:border-neutral-400 dark:text-neutral-500"
           }`}
           title={`difficulty ${n}`}
         >

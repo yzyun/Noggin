@@ -9,16 +9,15 @@ import type { QuestionDoc, QuestionRow } from "../domain/types";
 import { ipc, type SearchParams } from "../lib/ipc";
 import { useQuestions } from "../state/questions";
 import { Markdown } from "./Markdown";
-import { SubjectSelect } from "./fields/SubjectSelect";
 import { TagInput } from "./fields/TagInput";
 
 type AnswerPlacement = "none" | "inline" | "key";
 
 export function QuizView() {
-  const { allTags, recentFolders } = useQuestions();
+  const { allTags, allFolders } = useQuestions();
 
-  // Pool filters
-  const [subject, setSubject] = useState("");
+  // Pool filters — multiple subjects, OR-combined; none selected = all.
+  const [subjects, setSubjects] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [pool, setPool] = useState<QuestionRow[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -32,8 +31,8 @@ export function QuizView() {
   const [docs, setDocs] = useState<Map<string, QuestionDoc>>(new Map());
 
   const params: SearchParams = useMemo(
-    () => ({ text: null, folder: subject.trim() || null, tags, body_kind: null }),
-    [subject, tags],
+    () => ({ text: null, folder: null, folders: subjects, tags, body_kind: null }),
+    [subjects, tags],
   );
 
   useEffect(() => {
@@ -87,7 +86,7 @@ export function QuizView() {
   return (
     <div className="flex h-full">
       {/* Controls */}
-      <div className="w-80 shrink-0 space-y-4 overflow-y-auto border-r border-neutral-200 p-4 dark:border-neutral-800">
+      <div className="w-80 shrink-0 space-y-4 overflow-y-auto border-r border-edge p-4">
         <h2 className="text-sm font-semibold">Quiz builder</h2>
 
         <label className="block">
@@ -95,14 +94,38 @@ export function QuizView() {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+            className="w-full rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm"
           />
         </label>
 
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Subject</span>
-          <SubjectSelect value={subject} onChange={setSubject} recent={recentFolders()} />
-        </label>
+        <div>
+          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            Subjects {subjects.length > 0 ? `(${subjects.length})` : "(all)"}
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {allFolders().map((f) => {
+              const on = subjects.includes(f);
+              return (
+                <button
+                  key={f}
+                  onClick={() =>
+                    setSubjects(on ? subjects.filter((s) => s !== f) : [...subjects, f])
+                  }
+                  className={`rounded-full px-2 py-0.5 text-xs transition ${
+                    on
+                      ? "bg-accent text-on-accent"
+                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                  }`}
+                >
+                  📁 {f}
+                </button>
+              );
+            })}
+            {allFolders().length === 0 && (
+              <span className="text-xs text-neutral-400">no subjects yet</span>
+            )}
+          </div>
+        </div>
 
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Tags</span>
@@ -111,7 +134,7 @@ export function QuizView() {
 
         <div>
           <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Answers</span>
-          <div className="flex overflow-hidden rounded-md border border-neutral-300 dark:border-neutral-700">
+          <div className="flex overflow-hidden rounded-md border border-edge">
             {(
               [
                 ["none", "None"],
@@ -124,8 +147,8 @@ export function QuizView() {
                 onClick={() => setAnswers(v)}
                 className={`flex-1 px-2 py-1.5 text-xs ${
                   answers === v
-                    ? "bg-blue-600 font-medium text-white"
-                    : "bg-white text-neutral-600 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                    ? "bg-accent font-medium text-on-accent"
+                    : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 }`}
               >
                 {label}
@@ -148,19 +171,19 @@ export function QuizView() {
             <div className="flex gap-1">
               <button
                 onClick={() => setPicked(new Set(pool.map((r) => r.id)))}
-                className="rounded border border-neutral-300 px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                className="rounded border border-edge px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 all
               </button>
               <button
                 onClick={() => setPicked(new Set())}
-                className="rounded border border-neutral-300 px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                className="rounded border border-edge px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 none
               </button>
               <button
                 onClick={shuffle}
-                className="rounded border border-neutral-300 px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                className="rounded border border-edge px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 shuffle
               </button>
@@ -192,7 +215,7 @@ export function QuizView() {
         <button
           onClick={() => window.print()}
           disabled={selectedRows.length === 0}
-          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-40"
+          className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40"
         >
           Print / Save as PDF ({selectedRows.length})
         </button>
@@ -200,7 +223,7 @@ export function QuizView() {
 
       {/* On-screen preview */}
       <div className="flex-1 overflow-y-auto bg-neutral-100 p-6 dark:bg-neutral-950">
-        <div className="mx-auto max-w-2xl rounded-lg bg-white p-8 shadow dark:bg-neutral-900">
+        <div className="mx-auto max-w-2xl rounded-lg bg-surface p-8 shadow">
           <QuizDocument
             title={title}
             rows={selectedRows}

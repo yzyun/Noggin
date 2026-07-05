@@ -37,18 +37,18 @@ export function TagInput({ value, onChange, suggestions }: Props) {
   };
 
   return (
-    <div className="rounded-md border border-neutral-300 bg-white p-1.5 focus-within:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900">
+    <div className="rounded-md border border-edge bg-surface p-1.5 focus-within:border-accent">
       <div className="flex flex-wrap items-center gap-1">
         {value.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-900 dark:bg-blue-950 dark:text-blue-200"
+            className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent-text"
           >
             {tag}
             <button
               type="button"
               onClick={() => onChange(value.filter((t) => t !== tag))}
-              className="text-blue-500 hover:text-blue-800 dark:hover:text-blue-100"
+              className="opacity-60 hover:opacity-100"
               aria-label={`remove ${tag}`}
             >
               ×
@@ -75,13 +75,13 @@ export function TagInput({ value, onChange, suggestions }: Props) {
         />
       </div>
       {matches.length > 0 && (
-        <div className="mt-1 flex flex-wrap gap-1 border-t border-neutral-200 pt-1 dark:border-neutral-800">
+        <div className="mt-1 flex flex-wrap gap-1 border-t border-edge pt-1">
           {matches.map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => add(m)}
-              className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="rounded-full border border-edge px-2 py-0.5 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               {m}
             </button>

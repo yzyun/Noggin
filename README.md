@@ -138,13 +138,18 @@ Three ways:
 | Shortcut | Action |
 |---|---|
 | `⌘K` | Command palette (every action, searchable) |
+| `⌘P` | Quick search — jump straight to any question |
 | `⌘N` | New question |
 | `⌘1–⌘5` | Questions · Notes · Review · Quiz · Import |
 | `⌘Enter` | Save question (batch entry) |
 | `Space` / `1–4` / `Esc` | Review: reveal / grade / end session |
 | `⌘S` | Save note |
 
-Plus a light/dark theme toggle in the sidebar.
+### 🎨 Themes
+
+Six presets in the sidebar's **Theme** menu — Light, Dark, Sepia (warm paper + serif), Nord,
+Forest, and Violet — each restyling the accent colour, backgrounds, borders and font. Your
+choice persists across launches.
 
 ---
 

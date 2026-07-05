@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useVault } from "../state/vault";
 import { useQuestions } from "../state/questions";
 import { useUi, type View } from "../state/ui";
-import { toggleTheme } from "../lib/theme";
+import { currentTheme, setTheme, THEMES } from "../lib/theme";
 import { startVaultWatch } from "../lib/watch";
 import { handleGlobalShortcut, registerCoreCommands } from "../lib/commands";
 import { CommandPalette } from "./CommandPalette";
+import { QuickSearch } from "./QuickSearch";
+import { PromptDialog } from "./PromptDialog";
 import { QuestionsView } from "./QuestionsView";
 import { NotesView } from "./NotesView";
 import { ReviewView } from "./ReviewView";
@@ -22,10 +24,55 @@ const NAV: { id: View; label: string }[] = [
   { id: "import", label: "Import" },
 ];
 
+function ThemeMenu() {
+  const [open, setOpen] = useState(false);
+  const [, rerender] = useState(0);
+  const active = currentTheme();
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
+      >
+        Theme
+        <span
+          className="h-3 w-3 rounded-full border border-edge"
+          style={{ background: THEMES.find((t) => t.id === active)?.swatch }}
+        />
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-2 z-40 mb-1 w-48 rounded-lg border border-edge bg-surface p-1 shadow-xl">
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => {
+                setTheme(t.id);
+                setOpen(false);
+                rerender((n) => n + 1);
+              }}
+              className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm ${
+                active === t.id
+                  ? "bg-accent-soft font-medium text-accent-text"
+                  : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              }`}
+            >
+              <span
+                className="h-4 w-4 rounded-full border border-neutral-400/40"
+                style={{ background: `linear-gradient(135deg, ${t.bg} 50%, ${t.swatch} 50%)` }}
+              />
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Shell() {
   const { root, stats, close } = useVault();
   const { view, setView } = useUi();
-  const [, rerender] = useState(0);
 
   // On vault open: reconcile the index with the files on disk, then keep
   // it live via the folder watcher (catches external edits & drops).
@@ -40,7 +87,7 @@ export function Shell() {
     return () => cleanup?.();
   }, [root]);
 
-  // Global shortcuts (⌘K palette, ⌘N, ⌘1–5).
+  // Global shortcuts (⌘K palette, ⌘P search, ⌘N, ⌘1–5).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (handleGlobalShortcut(e)) e.preventDefault();
@@ -54,8 +101,8 @@ export function Shell() {
   return (
     <div className="flex h-full">
       {/* Sidebar */}
-      <aside className="flex w-56 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900">
-        <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
+      <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-sidebar">
+        <div className="border-b border-edge px-4 py-3">
           <div className="truncate text-sm font-semibold" title={root ?? ""}>
             {vaultName}
           </div>
@@ -71,7 +118,7 @@ export function Shell() {
               onClick={() => setView(item.id)}
               className={`flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm transition ${
                 view === item.id
-                  ? "bg-blue-100 font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200"
+                  ? "bg-accent-soft font-medium text-accent-text"
                   : "text-neutral-700 hover:bg-neutral-200/60 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
@@ -81,22 +128,20 @@ export function Shell() {
           ))}
         </nav>
 
-        <div className="space-y-1 border-t border-neutral-200 p-2 dark:border-neutral-800">
+        <div className="space-y-1 border-t border-edge p-2">
+          <button
+            onClick={() => useUi.getState().openQuickSearch()}
+            className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          >
+            Search <span className="text-[10px] text-neutral-400">⌘P</span>
+          </button>
           <button
             onClick={() => useUi.getState().openPalette()}
             className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
           >
             Commands <span className="text-[10px] text-neutral-400">⌘K</span>
           </button>
-          <button
-            onClick={() => {
-              toggleTheme();
-              rerender((n) => n + 1);
-            }}
-            className="w-full rounded-md px-3 py-1.5 text-left text-sm text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
-          >
-            Toggle theme
-          </button>
+          <ThemeMenu />
           <button
             onClick={close}
             className="w-full rounded-md px-3 py-1.5 text-left text-sm text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
@@ -122,6 +167,8 @@ export function Shell() {
       </main>
 
       <CommandPalette />
+      <QuickSearch />
+      <PromptDialog />
     </div>
   );
 }

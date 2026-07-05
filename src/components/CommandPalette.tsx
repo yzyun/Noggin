@@ -42,7 +42,7 @@ export function CommandPalette() {
         if (e.target === e.currentTarget) closePalette();
       }}
     >
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+      <div className="w-full max-w-md overflow-hidden rounded-xl border border-edge bg-surface shadow-2xl">
         <input
           ref={inputRef}
           value={query}
@@ -61,7 +61,7 @@ export function CommandPalette() {
             }
           }}
           placeholder="Type a command…"
-          className="w-full border-b border-neutral-200 bg-transparent px-4 py-3 text-sm outline-none dark:border-neutral-700"
+          className="w-full border-b border-edge bg-transparent px-4 py-3 text-sm outline-none"
         />
         <ul className="max-h-72 overflow-y-auto py-1">
           {items.map((cmd, i) => (
@@ -71,7 +71,7 @@ export function CommandPalette() {
                 onMouseEnter={() => setCursor(i)}
                 className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm ${
                   i === cursor
-                    ? "bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100"
+                    ? "bg-accent-soft text-accent-text"
                     : "text-neutral-700 dark:text-neutral-200"
                 }`}
               >

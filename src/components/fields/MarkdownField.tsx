@@ -52,7 +52,7 @@ export function MarkdownField({ value, onChange, placeholder, minHeight = "80px"
 
   return (
     <div
-      className="overflow-hidden rounded-md border border-neutral-300 bg-white focus-within:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
+      className="overflow-hidden rounded-md border border-edge bg-surface focus-within:border-accent"
       onPaste={(e) => {
         const images = imagesFromDataTransfer(e.clipboardData);
         if (images.length) {

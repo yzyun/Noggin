@@ -1,11 +1,108 @@
 @import "tailwindcss";
 
-/* Class-based dark mode: `dark` on <html>, toggled in theme.ts */
+/* Class-based dark mode: `dark` on <html>, managed by theme.ts */
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+/* ---------------------------------------------------------------------------
+   Design tokens → Tailwind utilities (bg-accent, bg-surface, border-edge, …)
+   Themes override the raw vars below on html[data-theme="…"].
+--------------------------------------------------------------------------- */
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
+  --color-surface: var(--surface);
+  --color-sidebar: var(--sidebar);
+  --color-edge: var(--edge);
+  --font-sans: var(--font-app);
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Light (default) */
+:root {
+  --accent: #2563eb;
+  --accent-hover: #3b82f6;
+  --accent-soft: #dbeafe;
+  --accent-text: #1e3a8a;
+  --on-accent: #ffffff;
+  --app-bg: #ffffff;
+  --surface: #ffffff;
+  --sidebar: #fafafa;
+  --edge: #e5e5e5;
+  --text: #171717;
+  --font-app: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html[data-theme="dark"] {
+  --accent: #2563eb;
+  --accent-hover: #3b82f6;
+  --accent-soft: #1e3a5f;
+  --accent-text: #bfdbfe;
+  --on-accent: #ffffff;
+  --app-bg: #0a0a0a;
+  --surface: #171717;
+  --sidebar: #131313;
+  --edge: #2a2a2a;
+  --text: #f5f5f5;
+}
+
+/* Warm paper + serif */
+html[data-theme="sepia"] {
+  --accent: #8b5e3c;
+  --accent-hover: #a06e48;
+  --accent-soft: #efe2cc;
+  --accent-text: #5f3f26;
+  --on-accent: #fdf9f0;
+  --app-bg: #f7f0e3;
+  --surface: #fcf7ec;
+  --sidebar: #f1e8d6;
+  --edge: #ddcdb0;
+  --text: #3f3428;
+  --font-app: "Iowan Old Style", Palatino, Georgia, serif;
+}
+
+/* Cool arctic dark */
+html[data-theme="nord"] {
+  --accent: #88c0d0;
+  --accent-hover: #9bcbd9;
+  --accent-soft: #434c5e;
+  --accent-text: #d8dee9;
+  --on-accent: #2e3440;
+  --app-bg: #2e3440;
+  --surface: #3b4252;
+  --sidebar: #353c4a;
+  --edge: #4c566a;
+  --text: #e5e9f0;
+}
+
+/* Fresh green, light */
+html[data-theme="forest"] {
+  --accent: #16a34a;
+  --accent-hover: #22c55e;
+  --accent-soft: #dcfce7;
+  --accent-text: #14532d;
+  --on-accent: #ffffff;
+  --app-bg: #f4f9f4;
+  --surface: #ffffff;
+  --sidebar: #ebf4eb;
+  --edge: #d5e5d5;
+  --text: #182a18;
+}
+
+/* Deep purple dark */
+html[data-theme="violet"] {
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --accent-soft: #312052;
+  --accent-text: #ddd6fe;
+  --on-accent: #ffffff;
+  --app-bg: #120d1f;
+  --surface: #1c1430;
+  --sidebar: #170f28;
+  --edge: #332552;
+  --text: #ede9fe;
 }
 
 html,
@@ -15,7 +112,10 @@ body,
 }
 
 body {
-  @apply bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+  background: var(--app-bg);
+  color: var(--text);
+  font-family: var(--font-app);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Print: show only the quiz document, always on white. */

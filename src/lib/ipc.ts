@@ -83,10 +83,13 @@ export const ipc = {
     invoke<ReviewStats>("review_stats", { now, todayStart }),
 };
 
-/** Mirrors Rust SearchParams. All filters optional; AND semantics. */
+/** Mirrors Rust SearchParams. All filters optional; AND semantics
+ *  (except `folders`, which ORs its entries). */
 export interface SearchParams {
   text?: string | null;
   folder?: string | null;
+  /** Multiple subjects (OR of subtrees) — quiz builder. */
+  folders?: string[];
   tags: string[];
   min_difficulty?: number | null;
   max_difficulty?: number | null;

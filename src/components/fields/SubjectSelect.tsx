@@ -33,7 +33,7 @@ export function SubjectSelect({ value, onChange, recent }: Props) {
 
   return (
     <div ref={wrapRef} className="relative">
-      <div className="flex overflow-hidden rounded-md border border-neutral-300 bg-white focus-within:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900">
+      <div className="flex overflow-hidden rounded-md border border-edge bg-surface focus-within:border-accent">
         <input
           value={value}
           onChange={(e) => {
@@ -64,7 +64,7 @@ export function SubjectSelect({ value, onChange, recent }: Props) {
       </div>
 
       {open && options.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
+        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-edge bg-surface py-1 shadow-lg">
           {options.map((f) => (
             <li key={f}>
               <button
@@ -74,8 +74,8 @@ export function SubjectSelect({ value, onChange, recent }: Props) {
                   onChange(f);
                   setOpen(false);
                 }}
-                className={`w-full px-2.5 py-1.5 text-left text-sm hover:bg-blue-50 dark:hover:bg-blue-950 ${
-                  f === value ? "font-medium text-blue-700 dark:text-blue-300" : ""
+                className={`w-full px-2.5 py-1.5 text-left text-sm hover:bg-accent-soft ${
+                  f === value ? "font-medium text-accent-text" : ""
                 }`}
               >
                 📁 {f}

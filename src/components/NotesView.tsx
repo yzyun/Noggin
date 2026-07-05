@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ipc, type DirEntry } from "../lib/ipc";
 import { slugify } from "../domain/title";
+import { textPrompt } from "../state/ui";
 import { MarkdownField } from "./fields/MarkdownField";
 import { Markdown } from "./Markdown";
 
@@ -54,7 +55,7 @@ export function NotesView() {
   }, [saveNote]);
 
   const createNote = async () => {
-    const name = prompt("Note name:");
+    const name = await textPrompt({ title: "New note", placeholder: "note name" });
     if (!name?.trim()) return;
     const rel = `notes/${slugify(name.trim(), 60)}.md`;
     await ipc.writeFile(rel, `# ${name.trim()}\n\n`);
@@ -72,12 +73,12 @@ export function NotesView() {
   return (
     <div className="flex h-full">
       {/* Note list */}
-      <div className="w-64 shrink-0 border-r border-neutral-200 dark:border-neutral-800">
-        <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2.5 dark:border-neutral-800">
+      <div className="w-64 shrink-0 border-r border-edge">
+        <div className="flex items-center justify-between border-b border-edge px-3 py-2.5">
           <h2 className="text-sm font-semibold">Notes</h2>
           <button
             onClick={createNote}
-            className="rounded-md bg-blue-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-blue-500"
+            className="rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-on-accent hover:bg-accent-hover"
           >
             + New
           </button>
@@ -89,7 +90,7 @@ export function NotesView() {
                 onClick={() => openNote(n.rel)}
                 className={`flex-1 truncate rounded-md px-2 py-1 text-left text-sm ${
                   openRel === n.rel
-                    ? "bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200"
+                    ? "bg-accent-soft text-accent-text"
                     : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 }`}
               >
@@ -115,7 +116,7 @@ export function NotesView() {
       <div className="flex min-w-0 flex-1 flex-col">
         {openRel ? (
           <>
-            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-800">
+            <div className="flex items-center justify-between border-b border-edge px-4 py-2.5">
               <span className="truncate text-sm font-medium">
                 {openRel.split("/").pop()?.replace(/\.md$/, "")}
                 {dirty && <span className="ml-1 text-neutral-400">•</span>}
@@ -123,14 +124,14 @@ export function NotesView() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setPreview((p) => !p)}
-                  className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 >
                   {preview ? "Edit" : "Preview"}
                 </button>
                 <button
                   onClick={saveNote}
                   disabled={!dirty}
-                  className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-40"
+                  className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40"
                   title="Cmd/Ctrl+S"
                 >
                   Save

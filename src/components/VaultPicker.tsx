@@ -18,7 +18,7 @@ export function VaultPicker() {
 
       <button
         onClick={pickAndOpen}
-        className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-500 active:bg-blue-700"
+        className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm transition hover:bg-accent-hover active:bg-accent-hover"
       >
         Choose vault folder…
       </button>

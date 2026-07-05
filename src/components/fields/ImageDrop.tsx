@@ -43,8 +43,8 @@ export function ImageDrop({ onInsert }: Props) {
         }}
         className={`mt-1 flex w-full items-center justify-center gap-2 rounded-md border border-dashed px-3 py-2 text-xs transition ${
           over
-            ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-            : "border-neutral-300 text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 dark:border-neutral-700 dark:hover:text-neutral-300"
+            ? "border-accent bg-accent-soft text-accent-text"
+            : "border-edge text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
         }`}
       >
         {busy ? "Adding image…" : "🖼 Drop an image here, or click to browse"}
