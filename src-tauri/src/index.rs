@@ -8,7 +8,10 @@ use tauri::State;
 use crate::error::Result;
 use crate::vault::AppState;
 
-fn with_db<T>(state: &State<'_, AppState>, f: impl FnOnce(&Connection) -> Result<T>) -> Result<T> {
+pub(crate) fn with_db<T>(
+    state: &State<'_, AppState>,
+    f: impl FnOnce(&Connection) -> Result<T>,
+) -> Result<T> {
     let guard = state
         .0
         .lock()
@@ -137,6 +140,49 @@ pub struct SearchParams {
     pub body_kind: Option<String>,
 }
 
+/// Append the WHERE clauses for `params` to `sql` (expects a `questions q`
+/// alias already in scope). Shared by index_search and the review queue.
+pub(crate) fn push_filters(
+    sql: &mut String,
+    binds: &mut Vec<Box<dyn rusqlite::types::ToSql>>,
+    params: &SearchParams,
+) {
+    if let Some(folder) = params.folder.as_deref().filter(|f| !f.is_empty()) {
+        sql.push_str(" AND (q.folder = ? OR q.folder LIKE ? || '/%')");
+        binds.push(Box::new(folder.to_string()));
+        binds.push(Box::new(folder.to_string()));
+    }
+    for tag in &params.tags {
+        sql.push_str(" AND EXISTS (SELECT 1 FROM json_each(q.tags) je WHERE je.value = ?)");
+        binds.push(Box::new(tag.clone()));
+    }
+    if let Some(min) = params.min_difficulty {
+        sql.push_str(" AND q.difficulty >= ?");
+        binds.push(Box::new(min));
+    }
+    if let Some(max) = params.max_difficulty {
+        sql.push_str(" AND q.difficulty <= ?");
+        binds.push(Box::new(max));
+    }
+    if let Some(kind) = params.body_kind.as_deref().filter(|k| !k.is_empty()) {
+        sql.push_str(" AND q.body_kind = ?");
+        binds.push(Box::new(kind.to_string()));
+    }
+    if let Some(text) = params.text.as_deref() {
+        for term in text.split_whitespace() {
+            sql.push_str(
+                " AND q.id IN (SELECT id FROM questions_fts
+                   WHERE title LIKE '%'||?||'%' OR question LIKE '%'||?||'%'
+                      OR answer LIKE '%'||?||'%' OR source LIKE '%'||?||'%'
+                      OR tags LIKE '%'||?||'%')",
+            );
+            for _ in 0..5 {
+                binds.push(Box::new(term.to_string()));
+            }
+        }
+    }
+}
+
 #[tauri::command]
 pub fn index_search(state: State<'_, AppState>, params: SearchParams) -> Result<Vec<QuestionRow>> {
     with_db(&state, |db| {
@@ -145,41 +191,7 @@ pub fn index_search(state: State<'_, AppState>, params: SearchParams) -> Result<
              FROM questions q WHERE 1=1",
         );
         let mut binds: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
-
-        if let Some(folder) = params.folder.as_deref().filter(|f| !f.is_empty()) {
-            sql.push_str(" AND (q.folder = ? OR q.folder LIKE ? || '/%')");
-            binds.push(Box::new(folder.to_string()));
-            binds.push(Box::new(folder.to_string()));
-        }
-        for tag in &params.tags {
-            sql.push_str(" AND EXISTS (SELECT 1 FROM json_each(q.tags) je WHERE je.value = ?)");
-            binds.push(Box::new(tag.clone()));
-        }
-        if let Some(min) = params.min_difficulty {
-            sql.push_str(" AND q.difficulty >= ?");
-            binds.push(Box::new(min));
-        }
-        if let Some(max) = params.max_difficulty {
-            sql.push_str(" AND q.difficulty <= ?");
-            binds.push(Box::new(max));
-        }
-        if let Some(kind) = params.body_kind.as_deref().filter(|k| !k.is_empty()) {
-            sql.push_str(" AND q.body_kind = ?");
-            binds.push(Box::new(kind.to_string()));
-        }
-        if let Some(text) = params.text.as_deref() {
-            for term in text.split_whitespace() {
-                sql.push_str(
-                    " AND q.id IN (SELECT id FROM questions_fts
-                       WHERE title LIKE '%'||?||'%' OR question LIKE '%'||?||'%'
-                          OR answer LIKE '%'||?||'%' OR source LIKE '%'||?||'%'
-                          OR tags LIKE '%'||?||'%')",
-                );
-                for _ in 0..5 {
-                    binds.push(Box::new(term.to_string()));
-                }
-            }
-        }
+        push_filters(&mut sql, &mut binds, &params);
         sql.push_str(" ORDER BY q.id DESC");
 
         let mut stmt = db.prepare(&sql)?;
@@ -206,7 +218,9 @@ pub fn index_get_question(state: State<'_, AppState>, id: String) -> Result<Opti
     })
 }
 
-fn row_to_question(row: &rusqlite::Row<'_>) -> std::result::Result<QuestionRow, rusqlite::Error> {
+pub(crate) fn row_to_question(
+    row: &rusqlite::Row<'_>,
+) -> std::result::Result<QuestionRow, rusqlite::Error> {
     let tags_json: String = row.get(7)?;
     Ok(QuestionRow {
         id: row.get(0)?,

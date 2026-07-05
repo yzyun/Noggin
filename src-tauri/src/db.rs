@@ -10,7 +10,7 @@ use std::path::Path;
 use crate::error::Result;
 
 /// Current schema version (PRAGMA user_version target).
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 const MIGRATION_V1: &str = r#"
 CREATE TABLE IF NOT EXISTS questions (
@@ -78,12 +78,22 @@ pub fn open(path: &Path) -> Result<Connection> {
     Ok(conn)
 }
 
+// v2: extra FSRS state the scheduler round-trips (ts-fsrs Card fields).
+const MIGRATION_V2: &str = r#"
+ALTER TABLE cards ADD COLUMN elapsed_days   REAL    NOT NULL DEFAULT 0;
+ALTER TABLE cards ADD COLUMN scheduled_days REAL    NOT NULL DEFAULT 0;
+ALTER TABLE cards ADD COLUMN learning_steps INTEGER NOT NULL DEFAULT 0;
+"#;
+
 fn migrate(conn: &Connection) -> Result<()> {
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     if version < 1 {
         conn.execute_batch(MIGRATION_V1)?;
     }
-    // Future migrations: if version < 2 { ... } — additive only.
+    if version < 2 {
+        conn.execute_batch(MIGRATION_V2)?;
+    }
+    // Future migrations: additive only.
     if version < SCHEMA_VERSION {
         conn.pragma_update(None, "user_version", SCHEMA_VERSION)?;
     }

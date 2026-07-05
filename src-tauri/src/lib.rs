@@ -1,3 +1,4 @@
+mod cards;
 mod db;
 mod error;
 mod index;
@@ -29,6 +30,10 @@ pub fn run() {
             index::index_remove_question,
             index::index_list_questions,
             index::index_get_question,
+            cards::cards_due,
+            cards::card_update,
+            cards::review_log_add,
+            cards::review_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

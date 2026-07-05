@@ -3,6 +3,20 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import type { IndexStats, QuestionRow } from "../domain/types";
+import type { CardRow, ReviewLogEntry } from "../domain/srs";
+
+export interface DueEntry {
+  question: QuestionRow;
+  card: CardRow;
+}
+
+export interface ReviewStats {
+  due_now: number;
+  new_count: number;
+  reviews_today: number;
+  total_reviews: number;
+  upcoming: [string, number][];
+}
 
 /** Payload for index_upsert_question (mirrors Rust QuestionUpsert). */
 export interface QuestionUpsert {
@@ -55,6 +69,13 @@ export const ipc = {
   search: (params: SearchParams) => invoke<QuestionRow[]>("index_search", { params }),
   listRecursive: (rel: string, ext?: string) =>
     invoke<DirEntry[]>("vault_list_recursive", { rel, ext: ext ?? null }),
+
+  cardsDue: (params: SearchParams, now: string, limit: number) =>
+    invoke<DueEntry[]>("cards_due", { params, now, limit }),
+  cardUpdate: (card: CardRow) => invoke<void>("card_update", { card }),
+  reviewLogAdd: (entry: ReviewLogEntry) => invoke<void>("review_log_add", { entry }),
+  reviewStats: (now: string, todayStart: string) =>
+    invoke<ReviewStats>("review_stats", { now, todayStart }),
 };
 
 /** Mirrors Rust SearchParams. All filters optional; AND semantics. */

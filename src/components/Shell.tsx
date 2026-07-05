@@ -8,6 +8,7 @@ import { toggleTheme } from "../lib/theme";
 import { startVaultWatch } from "../lib/watch";
 import { QuestionsView } from "./QuestionsView";
 import { NotesView } from "./NotesView";
+import { ReviewView } from "./ReviewView";
 
 const NAV = [
   { id: "questions", label: "Questions", hint: "Browse & edit (Phase 1–2)" },
@@ -91,6 +92,8 @@ export function Shell() {
           <QuestionsView />
         ) : active === "notes" ? (
           <NotesView />
+        ) : active === "review" ? (
+          <ReviewView />
         ) : (
           <div className="flex h-full items-center justify-center">
             {NAV.filter((n) => n.id === active).map((n) => (
