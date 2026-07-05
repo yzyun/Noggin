@@ -1,34 +1,37 @@
 // Main app layout once a vault is open: sidebar navigation + content area.
-// Phase 0: the sections are placeholders; each later phase fills one in.
 
 import { useEffect, useState } from "react";
 import { useVault } from "../state/vault";
 import { useQuestions } from "../state/questions";
+import { useUi, type View } from "../state/ui";
 import { toggleTheme } from "../lib/theme";
 import { startVaultWatch } from "../lib/watch";
+import { handleGlobalShortcut, registerCoreCommands } from "../lib/commands";
+import { CommandPalette } from "./CommandPalette";
 import { QuestionsView } from "./QuestionsView";
 import { NotesView } from "./NotesView";
 import { ReviewView } from "./ReviewView";
 import { ImportView } from "./ImportView";
+import { QuizView } from "./QuizView";
 
-const NAV = [
-  { id: "questions", label: "Questions", hint: "Browse & edit (Phase 1–2)" },
-  { id: "notes", label: "Notes", hint: "Markdown notes (Phase 1)" },
-  { id: "review", label: "Review", hint: "Spaced repetition (Phase 3)" },
-  { id: "import", label: "Import", hint: "CSV / Excel / JSON (Phase 4)" },
-] as const;
-
-type NavId = (typeof NAV)[number]["id"];
+const NAV: { id: View; label: string }[] = [
+  { id: "questions", label: "Questions" },
+  { id: "notes", label: "Notes" },
+  { id: "review", label: "Review" },
+  { id: "quiz", label: "Quiz" },
+  { id: "import", label: "Import" },
+];
 
 export function Shell() {
   const { root, stats, close } = useVault();
-  const [active, setActive] = useState<NavId>("questions");
+  const { view, setView } = useUi();
   const [, rerender] = useState(0);
 
   // On vault open: reconcile the index with the files on disk, then keep
   // it live via the folder watcher (catches external edits & drops).
   useEffect(() => {
     if (!root) return;
+    registerCoreCommands();
     void useQuestions.getState().rescan();
     let cleanup: (() => void) | undefined;
     void startVaultWatch().then((fn) => {
@@ -36,6 +39,15 @@ export function Shell() {
     });
     return () => cleanup?.();
   }, [root]);
+
+  // Global shortcuts (⌘K palette, ⌘N, ⌘1–5).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (handleGlobalShortcut(e)) e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const vaultName = root?.split("/").filter(Boolean).pop() ?? "";
 
@@ -53,22 +65,29 @@ export function Shell() {
         </div>
 
         <nav className="flex-1 space-y-0.5 p-2">
-          {NAV.map((item) => (
+          {NAV.map((item, i) => (
             <button
               key={item.id}
-              onClick={() => setActive(item.id)}
-              className={`w-full rounded-md px-3 py-1.5 text-left text-sm transition ${
-                active === item.id
+              onClick={() => setView(item.id)}
+              className={`flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm transition ${
+                view === item.id
                   ? "bg-blue-100 font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200"
                   : "text-neutral-700 hover:bg-neutral-200/60 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
               {item.label}
+              <span className="text-[10px] text-neutral-400">⌘{i + 1}</span>
             </button>
           ))}
         </nav>
 
         <div className="space-y-1 border-t border-neutral-200 p-2 dark:border-neutral-800">
+          <button
+            onClick={() => useUi.getState().openPalette()}
+            className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          >
+            Commands <span className="text-[10px] text-neutral-400">⌘K</span>
+          </button>
           <button
             onClick={() => {
               toggleTheme();
@@ -89,25 +108,20 @@ export function Shell() {
 
       {/* Content */}
       <main className="min-w-0 flex-1 overflow-hidden">
-        {active === "questions" ? (
+        {view === "questions" ? (
           <QuestionsView />
-        ) : active === "notes" ? (
+        ) : view === "notes" ? (
           <NotesView />
-        ) : active === "review" ? (
+        ) : view === "review" ? (
           <ReviewView />
-        ) : active === "import" ? (
+        ) : view === "import" ? (
           <ImportView />
         ) : (
-          <div className="flex h-full items-center justify-center">
-            {NAV.filter((n) => n.id === active).map((n) => (
-              <div key={n.id} className="text-center">
-                <h2 className="text-xl font-semibold">{n.label}</h2>
-                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">{n.hint}</p>
-              </div>
-            ))}
-          </div>
+          <QuizView />
         )}
       </main>
+
+      <CommandPalette />
     </div>
   );
 }

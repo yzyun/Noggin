@@ -17,3 +17,26 @@ body,
 body {
   @apply bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
 }
+
+/* Print: show only the quiz document, always on white. */
+.print-root {
+  display: none;
+}
+
+@media print {
+  #root {
+    display: none !important;
+  }
+  .print-root {
+    display: block !important;
+    background: white;
+    color: black;
+    padding: 1.5cm;
+  }
+  .break-before-page {
+    break-before: page;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+}

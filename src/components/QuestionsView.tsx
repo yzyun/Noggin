@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
 import { useQuestions } from "../state/questions";
+import { useUi } from "../state/ui";
 import { FilterPanel } from "./FilterPanel";
 import { Markdown } from "./Markdown";
 import { QuestionEditor } from "./QuestionEditor";
 
 export function QuestionsView() {
   const { rows, loaded, scanning, error, load, openDoc, removeMany } = useQuestions();
+  const newQuestionSignal = useUi((s) => s.newQuestionSignal);
   const [mode, setMode] = useState<"list" | "edit">("list");
   const [editing, setEditing] = useState<{ row: QuestionRow; doc: QuestionDoc } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -16,6 +18,14 @@ export function QuestionsView() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // ⌘N / palette "New question" opens a blank editor.
+  useEffect(() => {
+    if (newQuestionSignal > 0) {
+      setEditing(null);
+      setMode("edit");
+    }
+  }, [newQuestionSignal]);
 
   // Drop selections that fell out of the current result set.
   useEffect(() => {
