@@ -39,8 +39,3 @@ export function initTheme(): void {
   const fallback = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   setTheme(stored && THEMES.some((t) => t.id === stored) ? stored : fallback);
 }
-
-/** Cycle light ↔ dark (kept for muscle memory; full picker in the sidebar). */
-export function toggleTheme(): void {
-  setTheme(document.documentElement.classList.contains("dark") ? "light" : "dark");
-}

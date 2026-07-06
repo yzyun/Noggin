@@ -56,7 +56,6 @@ interface QuestionsStore {
   /** Move questions into another folder (drag & drop). Keeps ids/history. */
   moveQuestions(rows: QuestionRow[], folder: string): Promise<void>;
   openDoc(row: QuestionRow): Promise<QuestionDoc>;
-  remove(row: QuestionRow): Promise<void>;
   removeMany(rows: QuestionRow[]): Promise<void>;
 
   allTags(): string[];
@@ -217,10 +216,6 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
 
   async openDoc(row) {
     return parseQuestionFile(await ipc.readFile(row.path));
-  },
-
-  async remove(row) {
-    await get().removeMany([row]);
   },
 
   async removeMany(rows) {

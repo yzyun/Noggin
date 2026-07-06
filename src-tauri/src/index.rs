@@ -2,7 +2,7 @@
 //! The frontend parses/serializes the markdown; these commands only mirror
 //! the parsed metadata + searchable text into SQLite.
 
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection};
 use tauri::State;
 
 use crate::error::Result;
@@ -220,21 +220,6 @@ pub fn index_search(state: State<'_, AppState>, params: SearchParams) -> Result<
             .query_map(params_ref.as_slice(), row_to_question)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
-    })
-}
-
-/// Look up one question by id (e.g. to re-open the editor).
-#[tauri::command]
-pub fn index_get_question(state: State<'_, AppState>, id: String) -> Result<Option<QuestionRow>> {
-    with_db(&state, |db| {
-        Ok(db
-            .query_row(
-                "SELECT id, path, title, body_kind, difficulty, folder, source, tags, recall, created, mtime
-                 FROM questions WHERE id = ?1",
-                params![id],
-                row_to_question,
-            )
-            .optional()?)
     })
 }
 

@@ -27,15 +27,6 @@ export async function vaultImageUrl(rel: string): Promise<string> {
   return url;
 }
 
-/** Invalidate a cached image (e.g. after overwrite). */
-export function evictImage(rel: string): void {
-  const url = blobUrls.get(rel);
-  if (url) {
-    URL.revokeObjectURL(url);
-    blobUrls.delete(rel);
-  }
-}
-
 /** Map an <img src> from markdown to a vault-relative path, or null if it's
  *  external (http/data). Files reference attachments as `attachments/…` or
  *  with leading `../` segments depending on nesting depth. */

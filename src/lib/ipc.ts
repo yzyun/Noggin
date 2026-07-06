@@ -65,7 +65,6 @@ export const ipc = {
   upsertQuestion: (q: QuestionUpsert) => invoke<void>("index_upsert_question", { q }),
   removeQuestion: (id: string) => invoke<void>("index_remove_question", { id }),
   listQuestions: () => invoke<QuestionRow[]>("index_list_questions"),
-  getQuestion: (id: string) => invoke<QuestionRow | null>("index_get_question", { id }),
   search: (params: SearchParams) => invoke<QuestionRow[]>("index_search", { params }),
   listRecursive: (rel: string, ext?: string) =>
     invoke<DirEntry[]>("vault_list_recursive", { rel, ext: ext ?? null }),

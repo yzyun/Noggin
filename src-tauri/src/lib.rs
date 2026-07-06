@@ -33,7 +33,6 @@ pub fn run() {
             index::index_search,
             index::index_remove_question,
             index::index_list_questions,
-            index::index_get_question,
             cards::cards_due,
             cards::card_update,
             cards::review_log_add,
