@@ -8,35 +8,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BodyKind, QuestionRow } from "../domain/types";
 import { useQuestions } from "../state/questions";
-import { textPrompt } from "../state/ui";
+import { confirmDialog, textPrompt } from "../state/ui";
+import { buildFolderTree, type FolderNode } from "../lib/folderTree";
 
 const DND_QUESTIONS = "application/x-noggin-questions";
 const DND_FOLDER = "application/x-noggin-folder";
-
-interface FolderNode {
-  name: string;
-  path: string;
-  children: FolderNode[];
-}
-
-function buildFolderTree(folders: string[]): FolderNode[] {
-  const roots: FolderNode[] = [];
-  for (const folder of folders) {
-    let level = roots;
-    let acc = "";
-    for (const part of folder.split("/")) {
-      acc = acc ? `${acc}/${part}` : part;
-      let node = level.find((n) => n.path === acc);
-      if (!node) {
-        node = { name: part, path: acc, children: [] };
-        level.push(node);
-        level.sort((a, b) => a.name.localeCompare(b.name));
-      }
-      level = node.children;
-    }
-  }
-  return roots;
-}
 
 function countIn(rows: QuestionRow[], folder: string): number {
   return rows.filter((r) => r.folder === folder || r.folder.startsWith(`${folder}/`)).length;
@@ -155,11 +131,17 @@ export function FilterPanel() {
   };
 
   const confirmDelete = (path: string) => {
-    const n = countIn(allRows, path);
-    const msg = n
-      ? `Delete folder "${path}"? Its ${n} question${n > 1 ? "s" : ""} (and any subfolders) move up to the parent — nothing is lost.`
-      : `Delete empty folder "${path}"?`;
-    if (confirm(msg)) void deleteFolder(path).catch((e) => alert(String(e)));
+    void (async () => {
+      const n = countIn(allRows, path);
+      const ok = await confirmDialog({
+        title: `Delete folder "${path}"?`,
+        message: n
+          ? `Its ${n} question${n > 1 ? "s" : ""} (and any subfolders) move up to the parent — nothing is lost.`
+          : "The folder is empty.",
+        confirmLabel: "Delete folder",
+      });
+      if (ok) await deleteFolder(path).catch((e) => alert(String(e)));
+    })();
   };
 
   const hasFilters =

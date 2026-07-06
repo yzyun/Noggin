@@ -14,6 +14,15 @@ export interface PromptRequest {
   resolve(value: string | null): void;
 }
 
+export interface ConfirmRequest {
+  title: string;
+  message?: string;
+  /** Label for the confirming button (default "Delete"). */
+  confirmLabel?: string;
+  /** Called exactly once: true = confirmed, false = cancelled. */
+  resolve(ok: boolean): void;
+}
+
 interface UiStore {
   view: View;
   paletteOpen: boolean;
@@ -23,6 +32,7 @@ interface UiStore {
   /** Question id QuestionsView should scroll to and expand. */
   focusQuestionId: string | null;
   promptRequest: PromptRequest | null;
+  confirmRequest: ConfirmRequest | null;
 
   setView(view: View): void;
   openPalette(): void;
@@ -41,6 +51,7 @@ export const useUi = create<UiStore>((set, get) => ({
   newQuestionSignal: 0,
   focusQuestionId: null,
   promptRequest: null,
+  confirmRequest: null,
 
   setView: (view) => set({ view }),
   openPalette: () => set({ paletteOpen: true, quickSearchOpen: false }),
@@ -55,6 +66,26 @@ export const useUi = create<UiStore>((set, get) => ({
 
 /** In-app replacement for window.prompt (unsupported in WKWebView).
  *  Resolves with the entered string, or null if cancelled. */
+/** In-app replacement for window.confirm (unreliable in WKWebView).
+ *  Resolves true if the user confirms, false otherwise. */
+export function confirmDialog(opts: {
+  title: string;
+  message?: string;
+  confirmLabel?: string;
+}): Promise<boolean> {
+  return new Promise((resolve) => {
+    useUi.setState({
+      confirmRequest: {
+        ...opts,
+        resolve: (ok) => {
+          useUi.setState({ confirmRequest: null });
+          resolve(ok);
+        },
+      },
+    });
+  });
+}
+
 export function textPrompt(opts: {
   title: string;
   initial?: string;

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
 import { useQuestions } from "../state/questions";
-import { useUi } from "../state/ui";
+import { confirmDialog, useUi } from "../state/ui";
 import { FilterPanel } from "./FilterPanel";
 import { Markdown } from "./Markdown";
 import { QuestionEditor } from "./QuestionEditor";
@@ -83,11 +83,11 @@ export function QuestionsView() {
               <button
                 onClick={async () => {
                   const doomed = rows.filter((r) => selected.has(r.id));
-                  if (
-                    confirm(
-                      `Delete ${doomed.length} question${doomed.length > 1 ? "s" : ""}? The .md files will be removed.`,
-                    )
-                  ) {
+                  const ok = await confirmDialog({
+                    title: `Delete ${doomed.length} question${doomed.length > 1 ? "s" : ""}?`,
+                    message: "The .md files will be removed from the vault.",
+                  });
+                  if (ok) {
                     await removeMany(doomed);
                     setSelected(new Set());
                   }
@@ -143,9 +143,11 @@ export function QuestionsView() {
                     }
                   }}
                   onDelete={async () => {
-                    if (confirm(`Delete "${row.title ?? row.id}"? The .md file will be removed.`)) {
-                      await removeMany([row]);
-                    }
+                    const ok = await confirmDialog({
+                      title: `Delete "${row.title ?? row.id}"?`,
+                      message: "The .md file will be removed from the vault.",
+                    });
+                    if (ok) await removeMany([row]);
                   }}
                   openDoc={openDoc}
                 />

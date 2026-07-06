@@ -10,6 +10,7 @@ import { handleGlobalShortcut, registerCoreCommands } from "../lib/commands";
 import { CommandPalette } from "./CommandPalette";
 import { QuickSearch } from "./QuickSearch";
 import { PromptDialog } from "./PromptDialog";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { QuestionsView } from "./QuestionsView";
 import { NotesView } from "./NotesView";
 import { ReviewView } from "./ReviewView";
@@ -169,6 +170,7 @@ export function Shell() {
       <CommandPalette />
       <QuickSearch />
       <PromptDialog />
+      <ConfirmDialog />
     </div>
   );
 }
