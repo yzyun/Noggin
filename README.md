@@ -40,7 +40,7 @@ npm test                    # unit tests
   questions/               one .md file per question — the source of truth
     mechanics/
       kinematics/…         nested folders = subjects
-  notes/                   plain markdown notes
+  notes/                   markdown / LaTeX / PDF notes, organised in folders
   attachments/             images referenced by questions/notes
   .studydb/                app-owned state
     index.sqlite           search index + spaced-repetition schedule
@@ -98,8 +98,20 @@ npm test                    # unit tests
 
 ### 📝 Notes
 
-Plain Markdown notes with the same math/image rendering — for summaries, derivations, formula
-sheets. `⌘S` saves; toggle edit/preview.
+Markdown, LaTeX, and PDF files, side by side — for summaries, derivations, formula sheets, and
+reference papers.
+
+- **Markdown** notes get the same math/image rendering as questions, with `⌘S` to save and a
+  toggle between edit and preview.
+- **LaTeX** (`.tex`) notes open in the same text editor — create one by giving it a `.tex` name
+  when prompted, or drop an existing file in with **Import**.
+- **PDF** notes are view-only, rendered in an embedded viewer — bring one in with **Import**.
+- **Folders** work exactly like the question bank's: the `+` button creates folders (nest with
+  `/`), hovering a folder reveals `+` (subfolder), `✎` (rename/move), and `×` (delete — contents
+  move up to the parent). **Drag & drop** a note onto a folder to file it there, or a folder
+  onto another to nest it.
+- **Deleting** a note, question, or folder always asks for confirmation first — nothing goes
+  away on a stray click.
 
 ### 🧠 Review (spaced repetition)
 
