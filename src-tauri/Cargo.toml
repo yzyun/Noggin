@@ -1,6 +1,6 @@
 [package]
 name = "noggin"
-version = "0.3.0"
+version = "0.4.0"
 description = "Noggin — local-first question bank and spaced repetition for students"
 authors = ["Yang Zhuoyun"]
 edition = "2021"

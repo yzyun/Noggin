@@ -124,6 +124,7 @@ export function QuestionsView() {
                   key={row.id}
                   row={row}
                   autoFocus={row.id === focusQuestionId}
+                  dragIds={selected.has(row.id) ? [...selected] : [row.id]}
                   selected={selected.has(row.id)}
                   onSelect={(on) =>
                     setSelected((prev) => {
@@ -160,6 +161,7 @@ export function QuestionsView() {
 function QuestionCard({
   row,
   autoFocus,
+  dragIds,
   selected,
   onSelect,
   onEdit,
@@ -169,6 +171,8 @@ function QuestionCard({
   row: QuestionRow;
   /** Set when ⌘P picked this question: expand + scroll into view. */
   autoFocus?: boolean;
+  /** Question ids carried when this card is dragged onto a folder. */
+  dragIds: string[];
   selected: boolean;
   onSelect(on: boolean): void;
   onEdit(): void;
@@ -210,6 +214,11 @@ function QuestionCard({
   return (
     <li
       ref={liRef}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("application/x-noggin-questions", JSON.stringify(dragIds));
+        e.dataTransfer.effectAllowed = "move";
+      }}
       className={`rounded-lg border bg-surface ${
         selected || autoFocus ? "border-accent" : "border-edge"
       }`}

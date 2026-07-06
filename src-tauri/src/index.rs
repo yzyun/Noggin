@@ -187,13 +187,16 @@ pub(crate) fn push_filters(
     }
     if let Some(text) = params.text.as_deref() {
         for term in text.split_whitespace() {
+            // Each term must match somewhere: content/tags (FTS mirror) or
+            // the folder path the question lives under.
             sql.push_str(
-                " AND q.id IN (SELECT id FROM questions_fts
+                " AND (q.id IN (SELECT id FROM questions_fts
                    WHERE title LIKE '%'||?||'%' OR question LIKE '%'||?||'%'
                       OR answer LIKE '%'||?||'%' OR source LIKE '%'||?||'%'
-                      OR tags LIKE '%'||?||'%')",
+                      OR tags LIKE '%'||?||'%')
+                   OR q.folder LIKE '%'||?||'%')",
             );
-            for _ in 0..5 {
+            for _ in 0..6 {
                 binds.push(Box::new(term.to_string()));
             }
         }

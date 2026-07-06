@@ -86,6 +86,10 @@ npm test                    # unit tests
   `/`), and hovering a folder reveals `+` (new subfolder), `✎` (rename — edit the full path
   to move it anywhere), and `×` (delete — its contents move up to the parent, nothing is
   lost). Folders are real directories in the vault, so empty ones show up too.
+- **Drag & drop to organise**: drag a question card onto a folder to move it there (drag any
+  selected card to move the whole selection); drag a folder onto another folder to nest it,
+  or onto "All questions" to move it to the top level.
+- Searching also matches a question's **tags and folder path**, not just its text.
 - Combinable filters: **tags** (AND), **difficulty range**, **content kind** (text/math/image),
   and a **search box** that matches substrings anywhere in the question, answer, source or
   tags ("synth" finds "photosynthesis").

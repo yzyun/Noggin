@@ -53,6 +53,8 @@ interface QuestionsStore {
   renameFolder(from: string, to: string): Promise<void>;
   /** Delete a folder; its contents move up to the parent. */
   deleteFolder(path: string): Promise<void>;
+  /** Move questions into another folder (drag & drop). Keeps ids/history. */
+  moveQuestions(rows: QuestionRow[], folder: string): Promise<void>;
   openDoc(row: QuestionRow): Promise<QuestionDoc>;
   remove(row: QuestionRow): Promise<void>;
   removeMany(rows: QuestionRow[]): Promise<void>;
@@ -256,6 +258,18 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
       set({ filters: { ...get().filters, folder: null } });
     }
     await get().rescan();
+  },
+
+  async moveQuestions(rows, folder) {
+    const dir = folder.replace(/^\/+|\/+$/g, "");
+    for (const row of rows) {
+      const filename = row.path.split("/").pop()!;
+      const newPath = `questions/${dir ? `${dir}/` : ""}${filename}`;
+      if (newPath === row.path) continue;
+      await ipc.renamePath(row.path, newPath);
+      await indexFile(newPath, Math.floor(Date.now() / 1000));
+    }
+    await get().load();
   },
 
   allTags() {
