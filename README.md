@@ -15,9 +15,10 @@ Made for physics & math, where `$E = mc^2$` should just render.
 1. Download **`Noggin_x.y.z_aarch64.dmg`** from the
    [Releases page](https://github.com/yzyun/Noggin/releases) (Apple Silicon).
 2. Open the `.dmg` and drag **Noggin** into **Applications**.
-3. First launch: right-click **Noggin.app → Open → Open**. (The app isn't notarized with
-   Apple, so macOS warns once. If it still refuses, run
-   `xattr -cr /Applications/Noggin.app` in Terminal and open it again.)
+3. First launch: right-click **Noggin.app → Open → Open**. The app is ad-hoc signed but not
+   notarized with Apple, so macOS warns once. If macOS says the app is **"damaged and can't be
+   opened"**, that's just the download-quarantine flag — clear it with
+   `xattr -cr /Applications/Noggin.app` in Terminal, then open it again.
 4. Pick (or create) an empty folder as your **vault** — e.g. `~/Documents/Study Vault`.
    That's it. Noggin remembers your vault and reopens it next launch.
 
