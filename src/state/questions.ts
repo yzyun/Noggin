@@ -11,7 +11,8 @@ import { useVault } from "./vault";
 
 export interface Filters {
   text: string;
-  folder: string | null; // null = all folders
+  /** Selected folders (OR of subtrees); empty = all. ⌘/Ctrl+click multi-selects. */
+  folders: string[];
   tags: string[];
   minDifficulty: number | null;
   maxDifficulty: number | null;
@@ -20,7 +21,7 @@ export interface Filters {
 
 export const EMPTY_FILTERS: Filters = {
   text: "",
-  folder: null,
+  folders: [],
   tags: [],
   minDifficulty: null,
   maxDifficulty: null,
@@ -74,7 +75,7 @@ function questionPath(doc: QuestionDoc, folder: string): string {
 function toSearchParams(f: Filters) {
   return {
     text: f.text.trim() || null,
-    folder: f.folder,
+    folders: f.folders,
     tags: f.tags,
     min_difficulty: f.minDifficulty,
     max_difficulty: f.maxDifficulty,
@@ -239,19 +240,19 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
     if (!cleanTo || cleanTo === from) return;
     await ipc.renamePath(`questions/${from}`, `questions/${cleanTo}`);
     // Follow the selection if the renamed folder (or an ancestor) was active.
-    const f = get().filters.folder;
-    if (f === from || f?.startsWith(`${from}/`)) {
-      set({ filters: { ...get().filters, folder: cleanTo + (f?.slice(from.length) ?? "") } });
-    }
+    const folders = get().filters.folders.map((f) =>
+      f === from || f.startsWith(`${from}/`) ? cleanTo + f.slice(from.length) : f,
+    );
+    set({ filters: { ...get().filters, folders } });
     await get().rescan();
   },
 
   async deleteFolder(path) {
     await ipc.deleteFolder(`questions/${path}`);
-    const f = get().filters.folder;
-    if (f === path || f?.startsWith(`${path}/`)) {
-      set({ filters: { ...get().filters, folder: null } });
-    }
+    const folders = get().filters.folders.filter(
+      (f) => f !== path && !f.startsWith(`${path}/`),
+    );
+    set({ filters: { ...get().filters, folders } });
     await get().rescan();
   },
 

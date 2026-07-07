@@ -12,7 +12,7 @@ import { QuickSearch } from "./QuickSearch";
 import { PromptDialog } from "./PromptDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { QuestionsView } from "./QuestionsView";
-import { NotesView } from "./NotesView";
+import { NotesView, PapersView } from "./FileLibrary";
 import { ReviewView } from "./ReviewView";
 import { ImportView } from "./ImportView";
 import { QuizView } from "./QuizView";
@@ -20,6 +20,7 @@ import { QuizView } from "./QuizView";
 const NAV: { id: View; label: string }[] = [
   { id: "questions", label: "Questions" },
   { id: "notes", label: "Notes" },
+  { id: "papers", label: "Papers" },
   { id: "review", label: "Review" },
   { id: "quiz", label: "Quiz" },
   { id: "import", label: "Import" },
@@ -158,6 +159,8 @@ export function Shell() {
           <QuestionsView />
         ) : view === "notes" ? (
           <NotesView />
+        ) : view === "papers" ? (
+          <PapersView />
         ) : view === "review" ? (
           <ReviewView />
         ) : view === "import" ? (

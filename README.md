@@ -41,6 +41,7 @@ npm test                    # unit tests
     mechanics/
       kinematics/…         nested folders = subjects
   notes/                   markdown / LaTeX / PDF notes, organised in folders
+  papers/                  exam papers & worksheets (PDF), organised in folders
   attachments/             images referenced by questions/notes
   .studydb/                app-owned state
     index.sqlite           search index + spaced-repetition schedule
@@ -82,13 +83,16 @@ npm test                    # unit tests
 ### 🔍 Browse & search
 
 - **Folder tree** with per-subject counts — selecting a subject includes everything nested
-  under it. **Manage folders right in the tree**: the `+` button creates folders (nest with
-  `/`), and hovering a folder reveals `+` (new subfolder), `✎` (rename — edit the full path
-  to move it anywhere), and `×` (delete — its contents move up to the parent, nothing is
-  lost). Folders are real directories in the vault, so empty ones show up too.
+  under it, and **⌘/Ctrl+click selects several subjects at once** (the list shows their
+  combined questions). **Manage folders right in the tree**: the `+` button creates folders
+  (nest with `/`), and hovering a folder reveals `+` (new subfolder), `✎` (rename — edit the
+  full path to move it anywhere), and `×` (delete — its contents move up to the parent,
+  nothing is lost). Folders are real directories in the vault, so empty ones show up too.
 - **Drag & drop to organise**: drag a question card onto a folder to move it there (drag any
   selected card to move the whole selection); drag a folder onto another folder to nest it,
   or onto "All questions" to move it to the top level.
+- **⌘/Ctrl+click a question card** to add it to the selection without expanding it — then
+  drag the whole selection into a folder, or bulk-delete it.
 - Searching also matches a question's **tags and folder path**, not just its text.
 - Combinable filters: **tags** (AND), **difficulty range**, **content kind** (text/math/image),
   and a **search box** that matches substrings anywhere in the question, answer, source or
@@ -109,9 +113,15 @@ reference papers.
 - **Folders** work exactly like the question bank's: the `+` button creates folders (nest with
   `/`), hovering a folder reveals `+` (subfolder), `✎` (rename/move), and `×` (delete — contents
   move up to the parent). **Drag & drop** a note onto a folder to file it there, or a folder
-  onto another to nest it.
+  onto another to nest it. **⌘/Ctrl+click** folders to view several at once.
 - **Deleting** a note, question, or folder always asks for confirmation first — nothing goes
   away on a stray click.
+
+### 📑 Papers
+
+A home for **exam papers and worksheets**: hit **Import** to bring in any PDF, read it in the
+embedded viewer, and organise past papers into folders by subject or year — same folder tree,
+drag & drop, and multi-select as everywhere else.
 
 ### 🧠 Review (spaced repetition)
 
@@ -156,7 +166,7 @@ Three ways:
 | `⌘K` | Command palette (every action, searchable) |
 | `⌘P` | Quick search — jump straight to any question |
 | `⌘N` | New question |
-| `⌘1–⌘5` | Questions · Notes · Review · Quiz · Import |
+| `⌘1–⌘6` | Questions · Notes · Papers · Review · Quiz · Import |
 | `⌘Enter` | Save question (batch entry) |
 | `Space` / `1–4` / `Esc` | Review: reveal / grade / end session |
 | `⌘S` | Save note |

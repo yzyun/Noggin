@@ -4,12 +4,14 @@
 //
 // Drag & drop: drop question cards onto a folder to move them there; drag
 // a folder onto another folder (or "All questions" for top level) to move it.
+// ⌘/Ctrl+click folders to combine several subtrees into one filter.
 
 import { useEffect, useMemo, useState } from "react";
 import type { BodyKind, QuestionRow } from "../domain/types";
 import { useQuestions } from "../state/questions";
 import { confirmDialog, textPrompt } from "../state/ui";
 import { buildFolderTree, type FolderNode } from "../lib/folderTree";
+import { FolderIcon } from "./icons";
 
 const DND_QUESTIONS = "application/x-noggin-questions";
 const DND_FOLDER = "application/x-noggin-folder";
@@ -51,15 +53,15 @@ export function FilterPanel() {
     [folderDirs, allRows],
   );
 
-  // Tags scoped to the selected folder: "All questions" shows every tag,
-  // a selected folder shows only tags used inside its subtree.
+  // Tags scoped to the selected folders: "All questions" shows every tag,
+  // otherwise only tags used inside the selected subtrees.
   const tags = useMemo(() => {
-    const f = filters.folder;
-    const inScope = f
-      ? allRows.filter((r) => r.folder === f || r.folder.startsWith(`${f}/`))
+    const sel = filters.folders;
+    const inScope = sel.length
+      ? allRows.filter((r) => sel.some((f) => r.folder === f || r.folder.startsWith(`${f}/`)))
       : allRows;
     return [...new Set(inScope.flatMap((r) => r.tags))].sort((a, b) => a.localeCompare(b));
-  }, [allRows, filters.folder]);
+  }, [allRows, filters.folders]);
 
   // Selected tags that fell out of scope after a folder change are dropped.
   useEffect(() => {
@@ -144,9 +146,22 @@ export function FilterPanel() {
     })();
   };
 
+  // Plain click selects one folder (or deselects it); ⌘/Ctrl+click toggles
+  // the folder in/out of a multi-selection.
+  const clickFolder = (path: string) => (e: React.MouseEvent) => {
+    const sel = filters.folders;
+    if (e.metaKey || e.ctrlKey) {
+      setFilters({
+        folders: sel.includes(path) ? sel.filter((f) => f !== path) : [...sel, path],
+      });
+    } else {
+      setFilters({ folders: sel.length === 1 && sel[0] === path ? [] : [path] });
+    }
+  };
+
   const hasFilters =
     filters.text ||
-    filters.folder !== null ||
+    filters.folders.length > 0 ||
     filters.tags.length > 0 ||
     filters.minDifficulty !== null ||
     filters.maxDifficulty !== null ||
@@ -166,17 +181,21 @@ export function FilterPanel() {
         className={`group flex w-full items-center gap-1 rounded pr-1 text-xs ${
           dropTarget === node.path
             ? "bg-accent-soft ring-1 ring-accent"
-            : filters.folder === node.path
+            : filters.folders.includes(node.path)
               ? "bg-accent-soft font-medium text-accent-text"
               : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
         }`}
       >
         <button
-          onClick={() => setFilters({ folder: filters.folder === node.path ? null : node.path })}
+          onClick={clickFolder(node.path)}
+          title="⌘/Ctrl+click to select multiple folders"
           className="flex min-w-0 flex-1 items-center justify-between py-1 text-left"
           style={{ paddingLeft: `${8 + depth * 12}px` }}
         >
-          <span className="truncate">📁 {node.name}</span>
+          <span className="flex min-w-0 items-center gap-1.5 truncate">
+            <FolderIcon />
+            <span className="truncate">{node.name}</span>
+          </span>
           <span className="pl-1 text-neutral-400 group-hover:hidden">
             {countIn(allRows, node.path)}
           </span>
@@ -237,14 +256,14 @@ export function FilterPanel() {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto pb-2">
           <button
-            onClick={() => setFilters({ folder: null })}
+            onClick={() => setFilters({ folders: [] })}
             onDragOver={dragOver("")}
             onDragLeave={() => setDropTarget((t) => (t === "" ? null : t))}
             onDrop={drop("")}
             className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs ${
               dropTarget === ""
                 ? "bg-accent-soft ring-1 ring-accent"
-                : filters.folder === null
+                : filters.folders.length === 0
                   ? "bg-accent-soft font-medium text-accent-text"
                   : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
             }`}

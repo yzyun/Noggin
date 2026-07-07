@@ -1,9 +1,11 @@
-// Notes: markdown, LaTeX and PDF files under notes/, organised into
-// folders like the question bank. Markdown gets edit + preview, LaTeX is
-// edited as plain text, PDFs are view-only (embedded viewer).
+// A vault file library: files under one root dir (notes/ or papers/),
+// organised into folders like the question bank. Markdown gets edit +
+// preview, LaTeX is edited as plain text, PDFs are view-only (embedded
+// viewer). Files can be imported; markdown/LaTeX can be authored in-app.
 //
-// Drag & drop: drop a note onto a folder (or "All notes" for the root) to
-// move it; drag a folder onto another folder to nest it.
+// Drag & drop: drop a file onto a folder (or the "All …" row for the root)
+// to move it; drag a folder onto another folder to nest it. ⌘/Ctrl+click
+// folders to view several subtrees at once.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ipc, type DirEntry } from "../lib/ipc";
@@ -12,35 +14,75 @@ import { confirmDialog, textPrompt } from "../state/ui";
 import { buildFolderTree, type FolderNode } from "../lib/folderTree";
 import { MarkdownField } from "./fields/MarkdownField";
 import { Markdown } from "./Markdown";
+import { FolderIcon } from "./icons";
 
-const DND_NOTE = "application/x-noggin-note";
-const DND_NOTE_FOLDER = "application/x-noggin-note-folder";
-
-const NOTE_EXTS = ["md", "tex", "pdf"] as const;
-type NoteExt = (typeof NOTE_EXTS)[number];
-
-function extOf(name: string): NoteExt | null {
-  const ext = name.split(".").pop()?.toLowerCase();
-  return (NOTE_EXTS as readonly string[]).includes(ext ?? "") ? (ext as NoteExt) : null;
+interface LibraryConfig {
+  /** Vault dir this library lives in ("notes", "papers"). */
+  root: string;
+  title: string;
+  /** Singular noun for UI copy ("note", "paper"). */
+  noun: string;
+  exts: readonly string[];
+  /** Whether files can be authored in-app (markdown/LaTeX); PDFs are import-only. */
+  canCreate: boolean;
+  importHint: string;
 }
 
-/** Folder of a note rel ("notes/a/b/x.md" → "a/b", root notes → ""). */
-function folderOf(rel: string): string {
-  return rel.replace(/^notes\//, "").split("/").slice(0, -1).join("/");
+const NOTES: LibraryConfig = {
+  root: "notes",
+  title: "Notes",
+  noun: "note",
+  exts: ["md", "tex", "pdf"],
+  canCreate: true,
+  importHint: "Import a .md, .tex or .pdf file",
+};
+
+const PAPERS: LibraryConfig = {
+  root: "papers",
+  title: "Papers",
+  noun: "paper",
+  exts: ["pdf"],
+  canCreate: false,
+  importHint: "Import an exam paper or worksheet (.pdf)",
+};
+
+export function NotesView() {
+  return <FileLibrary cfg={NOTES} />;
 }
 
-function inSubtree(noteFolder: string, folder: string): boolean {
-  return noteFolder === folder || noteFolder.startsWith(`${folder}/`);
+export function PapersView() {
+  return <FileLibrary cfg={PAPERS} />;
+}
+
+function inSubtree(fileFolder: string, folder: string): boolean {
+  return fileFolder === folder || fileFolder.startsWith(`${folder}/`);
 }
 
 const TEX_TEMPLATE = "\\documentclass{article}\n\\begin{document}\n\n\\end{document}\n";
 
-export function NotesView() {
-  const [notes, setNotes] = useState<DirEntry[]>([]);
+function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
+  const DND_FILE = `application/x-noggin-file-${cfg.root}`;
+  const DND_DIR = `application/x-noggin-dir-${cfg.root}`;
+
+  const extOf = useCallback(
+    (name: string): string | null => {
+      const ext = name.split(".").pop()?.toLowerCase();
+      return ext && cfg.exts.includes(ext) ? ext : null;
+    },
+    [cfg],
+  );
+
+  /** Folder of a file rel ("<root>/a/b/x.md" → "a/b", root files → ""). */
+  const folderOf = useCallback(
+    (rel: string) => rel.slice(cfg.root.length + 1).split("/").slice(0, -1).join("/"),
+    [cfg],
+  );
+
+  const [files, setFiles] = useState<DirEntry[]>([]);
   const [folderDirs, setFolderDirs] = useState<string[]>([]);
-  /** Selected folder (null = all notes). */
-  const [selFolder, setSelFolder] = useState<string | null>(null);
-  /** Folder path currently hovered by a drag ("" = the All-notes root). */
+  /** Selected folders (empty = all). ⌘/Ctrl+click multi-selects. */
+  const [selFolders, setSelFolders] = useState<string[]>([]);
+  /** Folder path currently hovered by a drag ("" = the root row). */
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [openRel, setOpenRel] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -55,10 +97,10 @@ export function NotesView() {
   const refresh = useCallback(async () => {
     try {
       const [entries, dirs] = await Promise.all([
-        ipc.listRecursive("notes"),
-        ipc.listDirs("notes"),
+        ipc.listRecursive(cfg.root),
+        ipc.listDirs(cfg.root),
       ]);
-      setNotes(
+      setFiles(
         entries
           .filter((e) => extOf(e.name) !== null)
           .sort((a, b) => a.name.localeCompare(b.name)),
@@ -68,30 +110,45 @@ export function NotesView() {
     } catch (e) {
       setError(String(e));
     }
-  }, []);
+  }, [cfg, extOf]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  // Real directories (includes empty folders) ∪ folders referenced by notes.
+  // Real directories (includes empty folders) ∪ folders referenced by files.
   const tree = useMemo(
     () =>
       buildFolderTree([
-        ...new Set([...folderDirs, ...notes.map((n) => folderOf(n.rel)).filter(Boolean)]),
+        ...new Set([...folderDirs, ...files.map((f) => folderOf(f.rel)).filter(Boolean)]),
       ]),
-    [folderDirs, notes],
+    [folderDirs, files, folderOf],
   );
 
-  const visibleNotes = useMemo(
-    () => (selFolder === null ? notes : notes.filter((n) => inSubtree(folderOf(n.rel), selFolder))),
-    [notes, selFolder],
+  const visibleFiles = useMemo(
+    () =>
+      selFolders.length === 0
+        ? files
+        : files.filter((f) => selFolders.some((s) => inSubtree(folderOf(f.rel), s))),
+    [files, selFolders, folderOf],
   );
 
   const countIn = useCallback(
-    (folder: string) => notes.filter((n) => inSubtree(folderOf(n.rel), folder)).length,
-    [notes],
+    (folder: string) => files.filter((f) => inSubtree(folderOf(f.rel), folder)).length,
+    [files, folderOf],
   );
+
+  // Plain click selects one folder (or deselects it); ⌘/Ctrl+click toggles
+  // the folder in/out of a multi-selection.
+  const clickFolder = (path: string) => (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey) {
+      setSelFolders((sel) =>
+        sel.includes(path) ? sel.filter((f) => f !== path) : [...sel, path],
+      );
+    } else {
+      setSelFolders((sel) => (sel.length === 1 && sel[0] === path ? [] : [path]));
+    }
+  };
 
   // Revoke the PDF blob URL when it's replaced or the view unmounts.
   useEffect(() => {
@@ -99,7 +156,7 @@ export function NotesView() {
     return () => URL.revokeObjectURL(pdfUrl);
   }, [pdfUrl]);
 
-  const openNote = async (rel: string) => {
+  const openFile = async (rel: string) => {
     if (extOf(rel) === "pdf") {
       const bytes = await ipc.readBinary(rel);
       const blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
@@ -114,58 +171,63 @@ export function NotesView() {
     setPreview(false);
   };
 
-  const saveNote = useCallback(async () => {
+  const saveFile = useCallback(async () => {
     if (!openRel || extOf(openRel) === "pdf") return;
     await ipc.writeFile(openRel, text);
     setDirty(false);
     void refresh();
-  }, [openRel, text, refresh]);
+  }, [openRel, text, refresh, extOf]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        void saveNote();
+        void saveFile();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [saveNote]);
+  }, [saveFile]);
 
-  // --- note actions --------------------------------------------------------
+  // --- file actions --------------------------------------------------------
 
-  const notesDir = selFolder ? `notes/${selFolder}` : "notes";
+  // New/imported files land in the selected folder when exactly one is
+  // selected, otherwise at the root.
+  const targetDir = selFolders.length === 1 ? `${cfg.root}/${selFolders[0]}` : cfg.root;
 
-  const createNote = async () => {
+  const createFile = async () => {
     const name = await textPrompt({
-      title: selFolder ? `New note in "${selFolder}"` : "New note",
-      placeholder: "note name (add .tex for LaTeX)",
+      title:
+        selFolders.length === 1
+          ? `New ${cfg.noun} in "${selFolders[0]}"`
+          : `New ${cfg.noun}`,
+      placeholder: `${cfg.noun} name (add .tex for LaTeX)`,
     });
     if (!name?.trim()) return;
     let base = name.trim();
     const m = /\.(md|tex)$/i.exec(base);
     const ext = m ? (m[1].toLowerCase() as "md" | "tex") : "md";
     if (m) base = base.slice(0, -m[0].length).trim();
-    const rel = `${notesDir}/${slugify(base, 60)}.${ext}`;
+    const rel = `${targetDir}/${slugify(base, 60)}.${ext}`;
     await ipc.writeFile(rel, ext === "tex" ? TEX_TEMPLATE : `# ${base}\n\n`);
     await refresh();
-    await openNote(rel);
+    await openFile(rel);
   };
 
   const importFile = async (f: File) => {
     const ext = extOf(f.name);
     if (!ext) return;
     const base = slugify(f.name.replace(/\.[^.]+$/, ""), 60);
-    const taken = new Set(notes.map((n) => n.rel));
-    let rel = `${notesDir}/${base}.${ext}`;
-    for (let i = 2; taken.has(rel); i++) rel = `${notesDir}/${base}-${i}.${ext}`;
+    const taken = new Set(files.map((n) => n.rel));
+    let rel = `${targetDir}/${base}.${ext}`;
+    for (let i = 2; taken.has(rel); i++) rel = `${targetDir}/${base}-${i}.${ext}`;
     const bytes = Array.from(new Uint8Array(await f.arrayBuffer()));
     await ipc.writeBinary(rel, bytes);
     await refresh();
-    await openNote(rel);
+    await openFile(rel);
   };
 
-  const deleteNote = async (rel: string) => {
+  const deleteFile = async (rel: string) => {
     const ok = await confirmDialog({
       title: `Delete "${rel.split("/").pop()}"?`,
       message: "The file will be removed from the vault.",
@@ -176,8 +238,8 @@ export function NotesView() {
     await refresh();
   };
 
-  const moveNote = async (rel: string, folder: string) => {
-    const to = `notes${folder ? `/${folder}` : ""}/${rel.split("/").pop()!}`;
+  const moveFile = async (rel: string, folder: string) => {
+    const to = `${cfg.root}${folder ? `/${folder}` : ""}/${rel.split("/").pop()!}`;
     if (to === rel) return;
     await ipc.renamePath(rel, to);
     if (openRel === rel) setOpenRel(to);
@@ -185,6 +247,14 @@ export function NotesView() {
   };
 
   // --- folder actions ------------------------------------------------------
+
+  const remapSelection = (from: string, to: string | null) => {
+    setSelFolders((sel) =>
+      to === null
+        ? sel.filter((f) => !inSubtree(f, from))
+        : sel.map((f) => (inSubtree(f, from) ? to + f.slice(from.length) : f)),
+    );
+  };
 
   const promptCreateFolder = (parent?: string) => {
     void (async () => {
@@ -195,7 +265,8 @@ export function NotesView() {
         })
       )?.trim();
       if (!name) return;
-      await ipc.createDir(`notes/${parent ? `${parent}/` : ""}${name.replace(/^\/+|\/+$/g, "")}`)
+      await ipc
+        .createDir(`${cfg.root}/${parent ? `${parent}/` : ""}${name.replace(/^\/+|\/+$/g, "")}`)
         .catch((e) => alert(String(e)));
       await refresh();
     })();
@@ -208,20 +279,20 @@ export function NotesView() {
           title: "Rename / move folder (edit the full path to move it)",
           initial: path,
         })
-      )?.trim().replace(/^\/+|\/+$/g, "");
+      )
+        ?.trim()
+        .replace(/^\/+|\/+$/g, "");
       if (!next || next === path) return;
       try {
-        await ipc.renamePath(`notes/${path}`, `notes/${next}`);
+        await ipc.renamePath(`${cfg.root}/${path}`, `${cfg.root}/${next}`);
       } catch (e) {
         alert(String(e));
         return;
       }
-      // Follow the rename if the selection / open note lived inside.
-      if (selFolder && inSubtree(selFolder, path)) {
-        setSelFolder(next + selFolder.slice(path.length));
-      }
-      if (openRel && openRel.startsWith(`notes/${path}/`)) {
-        setOpenRel(`notes/${next}/${openRel.slice(`notes/${path}/`.length)}`);
+      // Follow the rename if the selection / open file lived inside.
+      remapSelection(path, next);
+      if (openRel && openRel.startsWith(`${cfg.root}/${path}/`)) {
+        setOpenRel(`${cfg.root}/${next}/${openRel.slice(`${cfg.root}/${path}/`.length)}`);
       }
       await refresh();
     })();
@@ -233,16 +304,16 @@ export function NotesView() {
       const ok = await confirmDialog({
         title: `Delete folder "${path}"?`,
         message: n
-          ? `Its ${n} note${n > 1 ? "s" : ""} (and any subfolders) move up to the parent — nothing is lost.`
+          ? `Its ${n} ${cfg.noun}${n > 1 ? "s" : ""} (and any subfolders) move up to the parent — nothing is lost.`
           : "The folder is empty.",
         confirmLabel: "Delete folder",
       });
       if (!ok) return;
-      await ipc.deleteFolder(`notes/${path}`).catch((e) => alert(String(e)));
-      if (selFolder && inSubtree(selFolder, path)) setSelFolder(null);
+      await ipc.deleteFolder(`${cfg.root}/${path}`).catch((e) => alert(String(e)));
+      remapSelection(path, null);
       // Contents moved up (possibly renamed on collision) — close the open
-      // note if it lived inside rather than guess its new path.
-      if (openRel && openRel.startsWith(`notes/${path}/`)) setOpenRel(null);
+      // file if it lived inside rather than guess its new path.
+      if (openRel && openRel.startsWith(`${cfg.root}/${path}/`)) setOpenRel(null);
       await refresh();
     })();
   };
@@ -251,7 +322,7 @@ export function NotesView() {
 
   const dragOver = (target: string) => (e: React.DragEvent) => {
     const types = [...e.dataTransfer.types];
-    if (types.includes(DND_NOTE) || types.includes(DND_NOTE_FOLDER)) {
+    if (types.includes(DND_FILE) || types.includes(DND_DIR)) {
       e.preventDefault();
       e.stopPropagation();
       e.dataTransfer.dropEffect = "move";
@@ -264,25 +335,23 @@ export function NotesView() {
     e.stopPropagation();
     setDropTarget(null);
 
-    const noteRel = e.dataTransfer.getData(DND_NOTE);
-    if (noteRel) {
-      void moveNote(noteRel, target).catch((err) => alert(String(err)));
+    const fileRel = e.dataTransfer.getData(DND_FILE);
+    if (fileRel) {
+      void moveFile(fileRel, target).catch((err) => alert(String(err)));
       return;
     }
 
-    const src = e.dataTransfer.getData(DND_NOTE_FOLDER);
+    const src = e.dataTransfer.getData(DND_DIR);
     if (src) {
       // Not into itself or its own subtree.
       if (src === target || target.startsWith(`${src}/`)) return;
       const to = target ? `${target}/${src.split("/").pop()!}` : src.split("/").pop()!;
       if (to === src) return;
       void (async () => {
-        await ipc.renamePath(`notes/${src}`, `notes/${to}`);
-        if (selFolder && inSubtree(selFolder, src)) {
-          setSelFolder(to + selFolder.slice(src.length));
-        }
-        if (openRel && openRel.startsWith(`notes/${src}/`)) {
-          setOpenRel(`notes/${to}/${openRel.slice(`notes/${src}/`.length)}`);
+        await ipc.renamePath(`${cfg.root}/${src}`, `${cfg.root}/${to}`);
+        remapSelection(src, to);
+        if (openRel && openRel.startsWith(`${cfg.root}/${src}/`)) {
+          setOpenRel(`${cfg.root}/${to}/${openRel.slice(`${cfg.root}/${src}/`.length)}`);
         }
         await refresh();
       })().catch((err) => alert(String(err)));
@@ -294,7 +363,7 @@ export function NotesView() {
       <div
         draggable
         onDragStart={(e) => {
-          e.dataTransfer.setData(DND_NOTE_FOLDER, node.path);
+          e.dataTransfer.setData(DND_DIR, node.path);
           e.dataTransfer.effectAllowed = "move";
         }}
         onDragOver={dragOver(node.path)}
@@ -303,17 +372,21 @@ export function NotesView() {
         className={`group flex w-full items-center gap-1 rounded pr-1 text-xs ${
           dropTarget === node.path
             ? "bg-accent-soft ring-1 ring-accent"
-            : selFolder === node.path
+            : selFolders.includes(node.path)
               ? "bg-accent-soft font-medium text-accent-text"
               : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
         }`}
       >
         <button
-          onClick={() => setSelFolder((f) => (f === node.path ? null : node.path))}
+          onClick={clickFolder(node.path)}
+          title="⌘/Ctrl+click to select multiple folders"
           className="flex min-w-0 flex-1 items-center justify-between py-1 text-left"
           style={{ paddingLeft: `${8 + depth * 12}px` }}
         >
-          <span className="truncate">📁 {node.name}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <FolderIcon />
+            <span className="truncate">{node.name}</span>
+          </span>
           <span className="pl-1 text-neutral-400 group-hover:hidden">{countIn(node.path)}</span>
         </button>
         <span className="hidden shrink-0 gap-0.5 group-hover:flex">
@@ -350,30 +423,36 @@ export function NotesView() {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar: folders + note list */}
+      {/* Sidebar: folders + file list */}
       <div className="flex w-64 shrink-0 flex-col border-r border-edge">
         <div className="flex items-center justify-between border-b border-edge px-3 py-2.5">
-          <h2 className="text-sm font-semibold">Notes</h2>
+          <h2 className="text-sm font-semibold">{cfg.title}</h2>
           <div className="flex gap-1">
             <button
               onClick={() => fileInput.current?.click()}
-              className="rounded-md border border-edge px-2 py-0.5 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              title="Import a .md, .tex or .pdf file"
+              className={`rounded-md px-2 py-0.5 text-xs ${
+                cfg.canCreate
+                  ? "border border-edge text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  : "bg-accent font-medium text-on-accent hover:bg-accent-hover"
+              }`}
+              title={cfg.importHint}
             >
               Import
             </button>
-            <button
-              onClick={createNote}
-              className="rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-on-accent hover:bg-accent-hover"
-            >
-              + New
-            </button>
+            {cfg.canCreate && (
+              <button
+                onClick={createFile}
+                className="rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-on-accent hover:bg-accent-hover"
+              >
+                + New
+              </button>
+            )}
           </div>
         </div>
         <input
           ref={fileInput}
           type="file"
-          accept=".md,.tex,.pdf"
+          accept={cfg.exts.map((e) => `.${e}`).join(",")}
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -398,20 +477,20 @@ export function NotesView() {
           </div>
           <div className="max-h-48 overflow-y-auto">
             <button
-              onClick={() => setSelFolder(null)}
+              onClick={() => setSelFolders([])}
               onDragOver={dragOver("")}
               onDragLeave={() => setDropTarget((t) => (t === "" ? null : t))}
               onDrop={drop("")}
               className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs ${
                 dropTarget === ""
                   ? "bg-accent-soft ring-1 ring-accent"
-                  : selFolder === null
+                  : selFolders.length === 0
                     ? "bg-accent-soft font-medium text-accent-text"
                     : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
-              <span>All notes</span>
-              <span className="text-neutral-400">{notes.length}</span>
+              <span>All {cfg.noun}s</span>
+              <span className="text-neutral-400">{files.length}</span>
             </button>
             {tree.map((n) => (
               <FolderRow key={n.path} node={n} depth={0} />
@@ -424,23 +503,24 @@ export function NotesView() {
           </div>
         </div>
 
-        {/* Note list */}
+        {/* File list */}
         <ul className="min-h-0 flex-1 overflow-y-auto p-2">
-          {visibleNotes.map((n) => {
+          {visibleFiles.map((n) => {
             const ext = extOf(n.name);
-            const noteFolder = folderOf(n.rel);
+            const fileFolder = folderOf(n.rel);
+            const showExt = ext !== "md" && cfg.exts.length > 1;
             return (
               <li
                 key={n.rel}
                 draggable
                 onDragStart={(e) => {
-                  e.dataTransfer.setData(DND_NOTE, n.rel);
+                  e.dataTransfer.setData(DND_FILE, n.rel);
                   e.dataTransfer.effectAllowed = "move";
                 }}
                 className="group flex items-center"
               >
                 <button
-                  onClick={() => openNote(n.rel)}
+                  onClick={() => openFile(n.rel)}
                   title={n.rel}
                   className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-1 text-left text-sm ${
                     openRel === n.rel
@@ -449,19 +529,19 @@ export function NotesView() {
                   }`}
                 >
                   <span className="truncate">{n.name.replace(/\.[^.]+$/, "")}</span>
-                  {ext !== "md" && (
+                  {showExt && (
                     <span className="shrink-0 rounded bg-neutral-200 px-1 text-[10px] font-medium uppercase text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
                       {ext}
                     </span>
                   )}
-                  {selFolder === null && noteFolder && (
+                  {selFolders.length === 0 && fileFolder && (
                     <span className="shrink-0 max-w-20 truncate text-[10px] text-neutral-400">
-                      {noteFolder}
+                      {fileFolder}
                     </span>
                   )}
                 </button>
                 <button
-                  onClick={() => deleteNote(n.rel)}
+                  onClick={() => deleteFile(n.rel)}
                   className="hidden px-1 text-xs text-neutral-400 hover:text-red-600 group-hover:block"
                   aria-label={`delete ${n.name}`}
                 >
@@ -470,9 +550,11 @@ export function NotesView() {
               </li>
             );
           })}
-          {visibleNotes.length === 0 && (
+          {visibleFiles.length === 0 && (
             <li className="px-2 py-4 text-center text-xs text-neutral-400">
-              {selFolder ? "No notes in this folder" : "No notes yet"}
+              {selFolders.length
+                ? `No ${cfg.noun}s in the selected folder${selFolders.length > 1 ? "s" : ""}`
+                : `No ${cfg.noun}s yet`}
             </li>
           )}
         </ul>
@@ -499,7 +581,7 @@ export function NotesView() {
                     </button>
                   )}
                   <button
-                    onClick={saveNote}
+                    onClick={saveFile}
                     disabled={!dirty}
                     className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40"
                     title="Cmd/Ctrl+S"
@@ -532,7 +614,9 @@ export function NotesView() {
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">
-            Select or create a note
+            {cfg.canCreate
+              ? `Select or create a ${cfg.noun}`
+              : `Select a ${cfg.noun}, or use Import to add one`}
           </div>
         )}
       </div>

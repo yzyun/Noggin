@@ -186,7 +186,12 @@ function QuestionCard({
   const [showAnswer, setShowAnswer] = useState(false);
   const liRef = useRef<HTMLLIElement>(null);
 
-  const toggle = async () => {
+  const toggle = async (e: React.MouseEvent) => {
+    // ⌘/Ctrl+click selects (for bulk actions / drag) instead of expanding.
+    if (e.metaKey || e.ctrlKey) {
+      onSelect(!selected);
+      return;
+    }
     if (!expanded && !doc) {
       try {
         setDoc(await openDoc(row));
@@ -194,7 +199,7 @@ function QuestionCard({
         /* show metadata only */
       }
     }
-    setExpanded((e) => !e);
+    setExpanded((v) => !v);
     setShowAnswer(false);
   };
 

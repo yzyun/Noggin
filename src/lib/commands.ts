@@ -40,21 +40,27 @@ export function registerCoreCommands(): void {
     run: () => ui().setView("notes"),
   });
   commands.register({
+    id: "go-papers",
+    title: "Go to Papers",
+    shortcut: "⌘3",
+    run: () => ui().setView("papers"),
+  });
+  commands.register({
     id: "go-review",
     title: "Go to Review",
-    shortcut: "⌘3",
+    shortcut: "⌘4",
     run: () => ui().setView("review"),
   });
   commands.register({
     id: "go-quiz",
     title: "Go to Quiz",
-    shortcut: "⌘4",
+    shortcut: "⌘5",
     run: () => ui().setView("quiz"),
   });
   commands.register({
     id: "go-import",
     title: "Go to Import",
-    shortcut: "⌘5",
+    shortcut: "⌘6",
     run: () => ui().setView("import"),
   });
   for (const theme of THEMES) {
@@ -76,7 +82,7 @@ export function registerCoreCommands(): void {
   });
 }
 
-/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘1–5). */
+/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘1–6). */
 export function handleGlobalShortcut(e: KeyboardEvent): boolean {
   if (!(e.metaKey || e.ctrlKey)) return false;
   const key = e.key.toLowerCase();
@@ -93,7 +99,7 @@ export function handleGlobalShortcut(e: KeyboardEvent): boolean {
     useUi.getState().requestNewQuestion();
     return true;
   }
-  const views = ["questions", "notes", "review", "quiz", "import"] as const;
+  const views = ["questions", "notes", "papers", "review", "quiz", "import"] as const;
   const idx = Number(e.key) - 1;
   if (idx >= 0 && idx < views.length && e.key === String(idx + 1)) {
     useUi.getState().setView(views[idx]);

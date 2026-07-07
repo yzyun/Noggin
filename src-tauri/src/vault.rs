@@ -16,7 +16,7 @@ use crate::{db, watcher};
 pub const STUDYDB_DIR: &str = ".studydb";
 const INDEX_FILE: &str = "index.sqlite";
 const CONFIG_FILE: &str = "config.json";
-const VAULT_SUBDIRS: [&str; 3] = ["questions", "notes", "attachments"];
+const VAULT_SUBDIRS: [&str; 4] = ["questions", "notes", "papers", "attachments"];
 
 const DEFAULT_CONFIG: &str = r#"{
   "schemaVersion": 1,
