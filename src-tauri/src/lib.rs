@@ -2,6 +2,7 @@ mod cards;
 mod db;
 mod error;
 mod index;
+mod print;
 mod vault;
 mod watcher;
 
@@ -37,6 +38,7 @@ pub fn run() {
             cards::card_update,
             cards::review_log_add,
             cards::review_stats,
+            print::print_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

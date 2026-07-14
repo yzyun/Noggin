@@ -12,7 +12,7 @@ Made for physics & math, where `$E = mc^2$` should just render.
 
 ## Install (macOS)
 
-1. Download **`Noggin_x.y.z_aarch64.dmg`** from the
+1. Download **`Noggin_0.7.0_aarch64.dmg`** (or the latest version) from the
    [Releases page](https://github.com/yzyun/Noggin/releases) (Apple Silicon).
 2. Open the `.dmg` and drag **Noggin** into **Applications**.
 3. First launch: right-click **Noggin.app → Open → Open**. The app is ad-hoc signed but not
@@ -127,18 +127,45 @@ drag & drop, and multi-select as everywhere else.
 ### 🧠 Review (spaced repetition)
 
 Noggin schedules reviews with **FSRS**, the modern successor to Anki's algorithm, targeting
-~90% retention with the fewest reviews.
+~90% retention with the fewest reviews — and everything about the schedule is tunable in
+**Settings** (see below), including a fully manual fixed-interval mode.
 
-- The setup screen shows what's **due**, what's **new**, today's count, and a 7-day forecast.
-  Scope the session by subject/tags and cap its size.
-- **Modes** (per session): **Flashcard** (think → reveal → grade), **Type-in** (write your
-  answer first — text or LaTeX — then compare against the stored answer), or **Per question**
-  (each card uses its own recall setting).
+The Review screen has two tabs:
+
+- **Due now** — your subjects listed with **due + new counts**, each expandable to the
+  individual questions inside (with "due 2h ago"-style timestamps). Hit **Review** on a
+  single subject or **Review all** to start immediately with your default session settings.
+  The header shows what's due, what's new, today's count, and a 7-day forecast.
+- **Custom session** — scope a session by subject/tags, pick the mode, and cap its size.
+
+During a session:
+
+- **Modes**: **Flashcard** (think → reveal → grade), **Type-in** (write your answer first —
+  text or LaTeX — then compare against the stored answer), or **Per question** (each card
+  uses its own recall setting).
 - Grade with **Again / Hard / Good / Easy** (keys `1–4`) — each button shows exactly when
   you'd next see the card (`10m`, `3d`, `2.0mo`…). Cards graded **Again** return later in the
   same session. `Space` reveals; `Esc` ends.
 - **Hints and solutions** are revealed only on request, so they never spoil recall.
 - Every review is appended to `review-log.jsonl` — your complete study history, forever.
+
+### ⚙️ Settings
+
+A dedicated **Settings** section (`⌘7`) — stored in `.studydb/config.json`, so your
+preferences sync and back up with the vault:
+
+- **Scheduler** — choose the algorithm:
+  - **FSRS (adaptive)**: edit the **learning steps** for new cards (e.g. change `1m 10m` to
+    `10m 1d` if the defaults feel too quick), the **relearning steps** for lapsed cards, the
+    **desired retention** (lower = fewer, more spaced reviews), the **maximum interval**, and
+    interval **fuzz**.
+  - **Manual intervals**: set a fixed time for each of **Again / Hard / Good / Easy**, plus a
+    **growth factor** that multiplies a card's interval on each Good/Easy once it has
+    graduated. Predictable, Anki-classic-style scheduling.
+- **Review sessions** — default max cards, default mode, and a **new-cards-per-day limit**
+  so a big import doesn't flood your queue.
+- **Quiz defaults** — default answer placement and metadata visibility for the quiz builder.
+- **Appearance** — the theme picker also lives here.
 
 ### 📄 Quiz → PDF
 
@@ -167,16 +194,17 @@ Three ways:
 | `⌘K` | Command palette (every action, searchable) |
 | `⌘P` | Quick search — jump straight to any question |
 | `⌘N` | New question |
-| `⌘1–⌘6` | Questions · Notes · Papers · Review · Quiz · Import |
+| `⌘1–⌘7` | Questions · Notes · Papers · Review · Quiz · Import · Settings |
 | `⌘Enter` | Save question (batch entry) |
 | `Space` / `1–4` / `Esc` | Review: reveal / grade / end session |
 | `⌘S` | Save note |
 
 ### 🎨 Themes
 
-Six presets in the sidebar's **Theme** menu — Light, Dark, Sepia (warm paper + serif), Nord,
-Forest, and Violet — each restyling the accent colour, backgrounds, borders and font. Your
-choice persists across launches.
+Six presets — Light, Dark, Sepia (warm paper + serif), Nord, Forest, and Violet — each
+restyling the accent colour, backgrounds, borders and font. Pick one from the sidebar's
+**Theme** menu or the **Settings** page; your choice persists across launches (and travels
+with the vault).
 
 ---
 

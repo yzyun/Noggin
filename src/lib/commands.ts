@@ -2,8 +2,9 @@
 // palette (and future keyboard shortcuts / plugins) read from the registry.
 
 import { commands } from "../domain/registries";
-import { setTheme, THEMES } from "./theme";
+import { THEMES } from "./theme";
 import { useQuestions } from "../state/questions";
+import { useSettings } from "../state/settings";
 import { useUi } from "../state/ui";
 import { useVault } from "../state/vault";
 
@@ -63,11 +64,18 @@ export function registerCoreCommands(): void {
     shortcut: "⌘6",
     run: () => ui().setView("import"),
   });
+  commands.register({
+    id: "go-settings",
+    title: "Go to Settings",
+    shortcut: "⌘7",
+    run: () => ui().setView("settings"),
+  });
   for (const theme of THEMES) {
     commands.register({
       id: `theme-${theme.id}`,
       title: `Theme: ${theme.label}`,
-      run: () => setTheme(theme.id),
+      // Through the settings store so config.json stays in sync.
+      run: () => useSettings.getState().update({ theme: theme.id }),
     });
   }
   commands.register({
@@ -82,7 +90,7 @@ export function registerCoreCommands(): void {
   });
 }
 
-/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘1–6). */
+/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘1–7). */
 export function handleGlobalShortcut(e: KeyboardEvent): boolean {
   if (!(e.metaKey || e.ctrlKey)) return false;
   const key = e.key.toLowerCase();
@@ -99,7 +107,7 @@ export function handleGlobalShortcut(e: KeyboardEvent): boolean {
     useUi.getState().requestNewQuestion();
     return true;
   }
-  const views = ["questions", "notes", "papers", "review", "quiz", "import"] as const;
+  const views = ["questions", "notes", "papers", "review", "quiz", "import", "settings"] as const;
   const idx = Number(e.key) - 1;
   if (idx >= 0 && idx < views.length && e.key === String(idx + 1)) {
     useUi.getState().setView(views[idx]);

@@ -8,6 +8,7 @@ import { parseQuestionFile } from "../domain/format";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
 import { ipc, type SearchParams } from "../lib/ipc";
 import { useQuestions } from "../state/questions";
+import { useSettings } from "../state/settings";
 import { Markdown } from "./Markdown";
 import { TagInput } from "./fields/TagInput";
 
@@ -23,12 +24,15 @@ export function QuizView() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [order, setOrder] = useState<string[]>([]);
 
-  // Options
+  // Options (placement/meta start from the Settings-page quiz defaults;
+  // the view unmounts on tab switch, so a mount-time read stays fresh).
+  const quizDefaults = useSettings.getState().settings.quiz;
   const [title, setTitle] = useState("Practice quiz");
-  const [answers, setAnswers] = useState<AnswerPlacement>("key");
-  const [showMeta, setShowMeta] = useState(false);
+  const [answers, setAnswers] = useState<AnswerPlacement>(quizDefaults.defaultAnswers);
+  const [showMeta, setShowMeta] = useState(quizDefaults.defaultShowMeta);
 
   const [docs, setDocs] = useState<Map<string, QuestionDoc>>(new Map());
+  const [printError, setPrintError] = useState<string | null>(null);
 
   const params: SearchParams = useMemo(
     () => ({ text: null, folder: null, folders: subjects, tags, body_kind: null }),
@@ -82,6 +86,19 @@ export function QuizView() {
   const selectedRows = order
     .map((id) => pool.find((r) => r.id === id))
     .filter((r): r is QuestionRow => Boolean(r && picked.has(r.id) && docs.has(r.id)));
+
+  // window.print() is a silent no-op in macOS WKWebView — go through the
+  // Rust command, which opens the native print dialog (with Save as PDF).
+  const doPrint = async () => {
+    setPrintError(null);
+    try {
+      const handled = await ipc.printPage();
+      if (!handled) window.print();
+    } catch (e) {
+      setPrintError(`Print failed: ${String(e)}`);
+      window.print();
+    }
+  };
 
   return (
     <div className="flex h-full">
@@ -213,12 +230,15 @@ export function QuizView() {
         </div>
 
         <button
-          onClick={() => window.print()}
+          onClick={() => void doPrint()}
           disabled={selectedRows.length === 0}
           className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40"
         >
           Print / Save as PDF ({selectedRows.length})
         </button>
+        {printError && (
+          <p className="text-xs text-red-600 dark:text-red-400">{printError}</p>
+        )}
       </div>
 
       {/* On-screen preview */}

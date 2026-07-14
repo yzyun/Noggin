@@ -14,6 +14,8 @@ export interface ReviewStats {
   due_now: number;
   new_count: number;
   reviews_today: number;
+  /** Cards whose first-ever review happened today (spends the daily new budget). */
+  new_today: number;
   total_reviews: number;
   upcoming: [string, number][];
 }
@@ -80,6 +82,9 @@ export const ipc = {
   reviewLogAdd: (entry: ReviewLogEntry) => invoke<void>("review_log_add", { entry }),
   reviewStats: (now: string, todayStart: string) =>
     invoke<ReviewStats>("review_stats", { now, todayStart }),
+
+  /** Native print dialog; resolves false when the platform needs window.print(). */
+  printPage: () => invoke<boolean>("print_page"),
 };
 
 /** Mirrors Rust SearchParams. All filters optional; AND semantics

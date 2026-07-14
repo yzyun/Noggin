@@ -4,7 +4,14 @@
 
 import { create } from "zustand";
 
-export type View = "questions" | "notes" | "papers" | "review" | "import" | "quiz";
+export type View =
+  | "questions"
+  | "notes"
+  | "papers"
+  | "review"
+  | "import"
+  | "quiz"
+  | "settings";
 
 export interface PromptRequest {
   title: string;

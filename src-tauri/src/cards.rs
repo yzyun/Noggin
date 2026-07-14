@@ -150,6 +150,8 @@ pub struct ReviewStats {
     pub due_now: i64,
     pub new_count: i64,
     pub reviews_today: i64,
+    /// Cards whose first-ever review happened today (spends the daily new-card budget).
+    pub new_today: i64,
     pub total_reviews: i64,
     /// (YYYY-MM-DD, count) pairs for upcoming scheduled reviews.
     pub upcoming: Vec<(String, i64)>,
@@ -176,6 +178,14 @@ pub fn review_stats(
             params![today_start],
             |r| r.get(0),
         )?;
+        let new_today: i64 = db.query_row(
+            "SELECT COUNT(*) FROM (
+                 SELECT question_id, MIN(reviewed_at) AS first_review
+                 FROM review_log GROUP BY question_id
+             ) WHERE first_review >= ?",
+            params![today_start],
+            |r| r.get(0),
+        )?;
         let total_reviews: i64 =
             db.query_row("SELECT COUNT(*) FROM review_log", [], |r| r.get(0))?;
 
@@ -191,6 +201,7 @@ pub fn review_stats(
             due_now,
             new_count,
             reviews_today,
+            new_today,
             total_reviews,
             upcoming,
         })

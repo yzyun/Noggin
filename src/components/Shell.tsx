@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useVault } from "../state/vault";
 import { useQuestions } from "../state/questions";
+import { useSettings } from "../state/settings";
 import { useUi, type View } from "../state/ui";
-import { currentTheme, setTheme, THEMES } from "../lib/theme";
+import { currentTheme, THEMES } from "../lib/theme";
 import { startVaultWatch } from "../lib/watch";
 import { handleGlobalShortcut, registerCoreCommands } from "../lib/commands";
 import { CommandPalette } from "./CommandPalette";
@@ -16,6 +17,7 @@ import { NotesView, PapersView } from "./FileLibrary";
 import { ReviewView } from "./ReviewView";
 import { ImportView } from "./ImportView";
 import { QuizView } from "./QuizView";
+import { SettingsView } from "./SettingsView";
 
 const NAV: { id: View; label: string }[] = [
   { id: "questions", label: "Questions" },
@@ -24,6 +26,7 @@ const NAV: { id: View; label: string }[] = [
   { id: "review", label: "Review" },
   { id: "quiz", label: "Quiz" },
   { id: "import", label: "Import" },
+  { id: "settings", label: "Settings" },
 ];
 
 function ThemeMenu() {
@@ -49,7 +52,8 @@ function ThemeMenu() {
             <button
               key={t.id}
               onClick={() => {
-                setTheme(t.id);
+                // Through the settings store so config.json stays in sync.
+                useSettings.getState().update({ theme: t.id });
                 setOpen(false);
                 rerender((n) => n + 1);
               }}
@@ -81,6 +85,7 @@ export function Shell() {
   useEffect(() => {
     if (!root) return;
     registerCoreCommands();
+    void useSettings.getState().load();
     void useQuestions.getState().rescan();
     let cleanup: (() => void) | undefined;
     void startVaultWatch().then((fn) => {
@@ -165,6 +170,8 @@ export function Shell() {
           <ReviewView />
         ) : view === "import" ? (
           <ImportView />
+        ) : view === "settings" ? (
+          <SettingsView />
         ) : (
           <QuizView />
         )}

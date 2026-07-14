@@ -18,10 +18,24 @@ const INDEX_FILE: &str = "index.sqlite";
 const CONFIG_FILE: &str = "config.json";
 const VAULT_SUBDIRS: [&str; 4] = ["questions", "notes", "papers", "attachments"];
 
+// Keep in sync with DEFAULT_SETTINGS in src/domain/settings.ts. Only written
+// when the file is absent; the frontend owns it afterwards.
 const DEFAULT_CONFIG: &str = r#"{
-  "schemaVersion": 1,
-  "newPerDay": 20,
-  "maxReviewsPerDay": 200
+  "schemaVersion": 2,
+  "theme": "light",
+  "scheduler": {
+    "mode": "fsrs",
+    "fsrs": {
+      "requestRetention": 0.9,
+      "maximumIntervalDays": 36500,
+      "enableFuzz": true,
+      "learningSteps": ["1m", "10m"],
+      "relearningSteps": ["10m"]
+    },
+    "manual": { "again": "10m", "hard": "1d", "good": "3d", "easy": "7d", "growthFactor": 2.0 }
+  },
+  "session": { "defaultMaxCards": 20, "defaultMode": "auto", "dailyNewLimit": 20 },
+  "quiz": { "defaultAnswers": "key", "defaultShowMeta": false }
 }
 "#;
 

@@ -1,22 +1,22 @@
-// Spaced-repetition review: session setup (deck filters + mode + stats),
-// the session itself (flashcard or type-in-then-check, FSRS-graded), and
-// an end-of-session summary.
+// Spaced-repetition review: setup (see ReviewSetup — due dashboard + custom
+// session builder), the session itself (flashcard or type-in-then-check,
+// graded by the scheduler configured in Settings), and an end-of-session
+// summary.
 //
 // Keyboard: Space = reveal · 1–4 = Again/Hard/Good/Easy · Esc = end session.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Rating } from "ts-fsrs";
-import { gradeCard, previewIntervals, todayStartIso, type Grade } from "../domain/srs";
+import { gradeCard, previewIntervals, type Grade } from "../domain/srs";
+import type { SessionMode } from "../domain/settings";
 import type { QuestionDoc } from "../domain/types";
-import { ipc, type DueEntry, type ReviewStats, type SearchParams } from "../lib/ipc";
+import { ipc, type DueEntry } from "../lib/ipc";
 import { parseQuestionFile } from "../domain/format";
-import { useQuestions } from "../state/questions";
+import { useSettings } from "../state/settings";
 import { Markdown } from "./Markdown";
 import { MarkdownField } from "./fields/MarkdownField";
-import { SubjectSelect } from "./fields/SubjectSelect";
-import { TagInput } from "./fields/TagInput";
+import { ReviewSetup } from "./ReviewSetup";
 
-type SessionMode = "flashcard" | "typein" | "auto";
 type Phase = "setup" | "session" | "done";
 
 const RATINGS: { grade: Grade; key: string; label: string; cls: string }[] = [
@@ -33,11 +33,10 @@ export function ReviewView() {
   const [summary, setSummary] = useState<Record<number, number>>({});
 
   return phase === "setup" ? (
-    <Setup
-      mode={mode}
-      setMode={setMode}
-      onStart={(entries) => {
+    <ReviewSetup
+      onStart={(entries, sessionMode) => {
         setQueue(entries);
+        setMode(sessionMode);
         setSummary({});
         setPhase("session");
       }}
@@ -51,154 +50,6 @@ export function ReviewView() {
     />
   ) : (
     <Done summary={summary} onBack={() => setPhase("setup")} />
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
-
-function Setup({
-  mode,
-  setMode,
-  onStart,
-}: {
-  mode: SessionMode;
-  setMode(m: SessionMode): void;
-  onStart(entries: DueEntry[]): void;
-}) {
-  const { allTags, recentFolders } = useQuestions();
-  const [subject, setSubject] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [limit, setLimit] = useState(20);
-  const [stats, setStats] = useState<ReviewStats | null>(null);
-  const [queueCount, setQueueCount] = useState<number | null>(null);
-  const [starting, setStarting] = useState(false);
-
-  const params: SearchParams = useMemo(
-    () => ({ text: null, folder: subject.trim() || null, tags, body_kind: null }),
-    [subject, tags],
-  );
-
-  useEffect(() => {
-    const now = new Date();
-    void ipc.reviewStats(now.toISOString(), todayStartIso(now)).then(setStats).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    void ipc
-      .cardsDue(params, new Date().toISOString(), 10_000)
-      .then((entries) => alive && setQueueCount(entries.length))
-      .catch(() => alive && setQueueCount(null));
-    return () => {
-      alive = false;
-    };
-  }, [params]);
-
-  const start = async () => {
-    setStarting(true);
-    try {
-      const entries = await ipc.cardsDue(params, new Date().toISOString(), limit);
-      if (entries.length) onStart(entries);
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  return (
-    <div className="mx-auto flex h-full max-w-xl flex-col justify-center gap-6 p-6">
-      <div>
-        <h2 className="text-xl font-semibold">Review</h2>
-        {stats && (
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-            {stats.due_now} due · {stats.new_count} new · {stats.reviews_today} reviewed today ·{" "}
-            {stats.total_reviews} all-time
-          </p>
-        )}
-      </div>
-
-      {/* Upcoming load */}
-      {stats && stats.upcoming.length > 0 && (
-        <div className="flex items-end gap-1">
-          {stats.upcoming.map(([day, n]) => (
-            <div key={day} className="flex flex-col items-center gap-0.5">
-              <div
-                className="w-8 rounded-t bg-accent/60"
-                style={{ height: `${Math.min(60, 8 + n * 6)}px` }}
-                title={`${day}: ${n} due`}
-              />
-              <span className="text-[10px] text-neutral-400">{day.slice(5)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Deck filters */}
-      <div className="space-y-3">
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            Subject (leave empty for all)
-          </span>
-          <SubjectSelect value={subject} onChange={setSubject} recent={recentFolders()} />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Tags</span>
-          <TagInput value={tags} onChange={setTags} suggestions={allTags()} />
-        </label>
-        <div className="flex items-end gap-4">
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Mode</span>
-            <div className="flex overflow-hidden rounded-md border border-edge">
-              {(
-                [
-                  ["auto", "Per question"],
-                  ["flashcard", "Flashcard"],
-                  ["typein", "Type-in"],
-                ] as [SessionMode, string][]
-              ).map(([m, label]) => (
-                <button
-                  key={m}
-                  onClick={() => setMode(m)}
-                  className={`px-3 py-1.5 text-xs ${
-                    mode === m
-                      ? "bg-accent font-medium text-on-accent"
-                      : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              Max cards
-            </span>
-            <input
-              type="number"
-              min={1}
-              max={500}
-              value={limit}
-              onChange={(e) => setLimit(Math.max(1, Number(e.target.value) || 20))}
-              className="w-20 rounded-md border border-edge bg-surface px-2 py-1.5 text-sm"
-            />
-          </label>
-        </div>
-      </div>
-
-      <button
-        onClick={start}
-        disabled={starting || !queueCount}
-        className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm transition hover:bg-accent-hover disabled:opacity-40"
-      >
-        {queueCount === null
-          ? "…"
-          : queueCount === 0
-            ? "Nothing due for this deck 🎉"
-            : `Start reviewing ${Math.min(queueCount, limit)} card${Math.min(queueCount, limit) > 1 ? "s" : ""}`}
-      </button>
-    </div>
   );
 }
 
@@ -217,6 +68,7 @@ function Session({
   onRated(g: Grade): void;
   onEnd(): void;
 }) {
+  const scheduler = useSettings((s) => s.settings.scheduler);
   const [queue, setQueue] = useState(initialQueue);
   const [idx, setIdx] = useState(0);
   const [doc, setDoc] = useState<QuestionDoc | null>(null);
@@ -249,14 +101,14 @@ function Session({
   }, [entry]);
 
   const previews = useMemo(
-    () => (entry ? previewIntervals(entry.card) : null),
-    [entry],
+    () => (entry ? previewIntervals(entry.card, new Date(), scheduler) : null),
+    [entry, scheduler],
   );
 
   const rate = useCallback(
     async (grade: Grade) => {
       if (!entry || !revealed) return;
-      const { updated, log } = gradeCard(entry.card, grade, cardMode);
+      const { updated, log } = gradeCard(entry.card, grade, cardMode, new Date(), scheduler);
       await ipc.cardUpdate(updated);
       await ipc.reviewLogAdd(log);
       onRated(grade);
@@ -274,7 +126,7 @@ function Session({
         onEnd();
       }
     },
-    [entry, revealed, cardMode, idx, queue.length, onRated, onEnd],
+    [entry, revealed, cardMode, scheduler, idx, queue.length, onRated, onEnd],
   );
 
   // Keyboard shortcuts.
