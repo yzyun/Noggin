@@ -67,7 +67,7 @@ export function registerCoreCommands(): void {
   commands.register({
     id: "go-settings",
     title: "Go to Settings",
-    shortcut: "⌘7",
+    shortcut: "⌘,",
     run: () => ui().setView("settings"),
   });
   for (const theme of THEMES) {
@@ -90,7 +90,7 @@ export function registerCoreCommands(): void {
   });
 }
 
-/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘1–7). */
+/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘, settings, ⌘1–6). */
 export function handleGlobalShortcut(e: KeyboardEvent): boolean {
   if (!(e.metaKey || e.ctrlKey)) return false;
   const key = e.key.toLowerCase();
@@ -107,7 +107,12 @@ export function handleGlobalShortcut(e: KeyboardEvent): boolean {
     useUi.getState().requestNewQuestion();
     return true;
   }
-  const views = ["questions", "notes", "papers", "review", "quiz", "import", "settings"] as const;
+  if (key === ",") {
+    // The conventional macOS "preferences" shortcut.
+    useUi.getState().setView("settings");
+    return true;
+  }
+  const views = ["questions", "notes", "papers", "review", "quiz", "import"] as const;
   const idx = Number(e.key) - 1;
   if (idx >= 0 && idx < views.length && e.key === String(idx + 1)) {
     useUi.getState().setView(views[idx]);

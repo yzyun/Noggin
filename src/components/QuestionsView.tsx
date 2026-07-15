@@ -8,7 +8,6 @@ import { DND_QUESTIONS, FilterPanel } from "./FilterPanel";
 import { Markdown } from "./Markdown";
 import { Button } from "./ui/Button";
 import { Callout } from "./ui/Callout";
-import { FolderBadge } from "./ui/chips";
 import { QuestionEditor } from "./QuestionEditor";
 
 export function QuestionsView() {
@@ -240,21 +239,24 @@ function QuestionCard({
           onClick={(e) => e.stopPropagation()}
           onChange={(e) => onSelect(e.target.checked)}
         />
-        <span className="flex-1 truncate text-sm">{row.title ?? row.id}</span>
+        <span className="min-w-0 flex-1 truncate text-sm">{row.title ?? row.id}</span>
         {row.difficulty !== null && (
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
             d{row.difficulty}
           </span>
         )}
-        {row.folder && <FolderBadge folder={row.folder} />}
-        {row.tags.slice(0, 3).map((t) => (
-          <span
-            key={t}
-            className="rounded-full bg-accent-soft px-1.5 py-0.5 text-xs text-accent-text"
-          >
-            {t}
-          </span>
-        ))}
+        {row.tags.length > 0 && (
+          <div className="no-scrollbar flex max-w-[45%] shrink-0 gap-1 overflow-x-auto">
+            {row.tags.map((t) => (
+              <span
+                key={t}
+                className="shrink-0 rounded-full bg-accent-soft px-1.5 py-0.5 text-xs text-accent-text"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -289,7 +291,13 @@ function QuestionCard({
                 Reveal answer
               </Button>
             ))}
-          {row.source && <div className="text-xs text-neutral-400">Source: {row.source}</div>}
+          {(row.folder || row.source) && (
+            <div className="text-xs text-neutral-400">
+              {[row.folder && `📁 ${row.folder}`, row.source && `Source: ${row.source}`]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          )}
         </div>
       )}
     </li>

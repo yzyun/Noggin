@@ -118,6 +118,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Scrollable without a visible scrollbar (e.g. the tag strip on a card). */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Print: show only the quiz document, always on white. */
 .print-root {
   display: none;

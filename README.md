@@ -151,7 +151,7 @@ During a session:
 
 ### ⚙️ Settings
 
-A dedicated **Settings** section (`⌘7`) — stored in `.studydb/config.json`, so your
+A dedicated **Settings** section (`⌘,`) — stored in `.studydb/config.json`, so your
 preferences sync and back up with the vault:
 
 - **Scheduler** — choose the algorithm:
@@ -194,7 +194,8 @@ Three ways:
 | `⌘K` | Command palette (every action, searchable) |
 | `⌘P` | Quick search — jump straight to any question |
 | `⌘N` | New question |
-| `⌘1–⌘7` | Questions · Notes · Papers · Review · Quiz · Import · Settings |
+| `⌘1–⌘6` | Questions · Notes · Papers · Review · Quiz · Import |
+| `⌘,` | Settings |
 | `⌘Enter` | Save question (batch entry) |
 | `Space` / `1–4` / `Esc` | Review: reveal / grade / end session |
 | `⌘S` | Save note |
@@ -203,7 +204,7 @@ Three ways:
 
 Six presets — Light, Dark, Sepia (warm paper + serif), Nord, Forest, and Violet — each
 restyling the accent colour, backgrounds, borders and font. Pick one on the **Settings**
-page (`⌘7`) or via the command palette; your choice persists across launches (and travels
+page (`⌘,`) or via the command palette; your choice persists across launches (and travels
 with the vault).
 
 ---

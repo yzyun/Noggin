@@ -45,7 +45,7 @@ export function Shell() {
     return () => cleanup?.();
   }, [root]);
 
-  // Global shortcuts (⌘K palette, ⌘P search, ⌘N, ⌘1–7).
+  // Global shortcuts (⌘K palette, ⌘P search, ⌘N, ⌘, settings, ⌘1–6).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (handleGlobalShortcut(e)) e.preventDefault();
@@ -107,7 +107,7 @@ export function Shell() {
                 : "text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
             }`}
           >
-            Settings <span className="text-[10px] text-neutral-400">⌘7</span>
+            Settings <span className="text-[10px] text-neutral-400">⌘,</span>
           </button>
           <button
             onClick={close}
