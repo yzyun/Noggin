@@ -9,7 +9,7 @@ use rusqlite::params;
 use tauri::State;
 
 use crate::error::{Error, Result};
-use crate::index::{push_filters, row_to_question, with_db, QuestionRow, SearchParams};
+use crate::index::{push_filters, row_to_question, with_db, QuestionRow, SearchParams, QUESTION_COLS};
 use crate::vault::{AppState, STUDYDB_DIR};
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -64,7 +64,7 @@ pub fn cards_due(
 ) -> Result<Vec<DueEntry>> {
     with_db(&state, |db| {
         let mut sql = format!(
-            "SELECT q.id, q.path, q.title, q.body_kind, q.difficulty, q.folder, q.source, q.tags, q.recall, q.created, q.mtime, {CARD_COLS}
+            "SELECT {QUESTION_COLS}, {CARD_COLS}
              FROM questions q JOIN cards c ON c.question_id = q.id
              WHERE (c.state = 'new' OR c.due IS NULL OR c.due <= ?)"
         );
@@ -124,9 +124,7 @@ pub struct ReviewLogEntry {
 /// (the jsonl is the portable backup the stats can be rebuilt from).
 #[tauri::command]
 pub fn review_log_add(state: State<'_, AppState>, entry: ReviewLogEntry) -> Result<()> {
-    let guard = state.0.lock().map_err(|_| Error::msg("state lock poisoned"))?;
-    let vault = guard.as_ref().ok_or_else(|| Error::msg("no vault is open"))?;
-
+    crate::vault::with_vault(&state, |vault| {
     vault.db.execute(
         "INSERT INTO review_log (question_id, rating, mode, reviewed_at, elapsed_days, scheduled_days)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -136,13 +134,14 @@ pub fn review_log_add(state: State<'_, AppState>, entry: ReviewLogEntry) -> Resu
         ],
     )?;
 
-    let line = serde_json::to_string(&entry).map_err(|e| Error::msg(e.to_string()))?;
+    let line = serde_json::to_string(&entry)?;
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(vault.root.join(STUDYDB_DIR).join("review-log.jsonl"))?;
     writeln!(file, "{line}")?;
     Ok(())
+    })
 }
 
 #[derive(serde::Serialize)]
@@ -157,6 +156,10 @@ pub struct ReviewStats {
     pub upcoming: Vec<(String, i64)>,
 }
 
+fn count(db: &rusqlite::Connection, sql: &str, params: impl rusqlite::Params) -> Result<i64> {
+    Ok(db.query_row(sql, params, |r| r.get(0))?)
+}
+
 /// Summary for the review setup screen. `now`/`today_start` are ISO strings
 /// from the frontend so "today" respects the local timezone.
 #[tauri::command]
@@ -166,28 +169,26 @@ pub fn review_stats(
     today_start: String,
 ) -> Result<ReviewStats> {
     with_db(&state, |db| {
-        let due_now: i64 = db.query_row(
+        let due_now = count(
+            db,
             "SELECT COUNT(*) FROM cards WHERE state != 'new' AND due IS NOT NULL AND due <= ?",
             params![now],
-            |r| r.get(0),
         )?;
-        let new_count: i64 =
-            db.query_row("SELECT COUNT(*) FROM cards WHERE state = 'new'", [], |r| r.get(0))?;
-        let reviews_today: i64 = db.query_row(
+        let new_count = count(db, "SELECT COUNT(*) FROM cards WHERE state = 'new'", [])?;
+        let reviews_today = count(
+            db,
             "SELECT COUNT(*) FROM review_log WHERE reviewed_at >= ?",
             params![today_start],
-            |r| r.get(0),
         )?;
-        let new_today: i64 = db.query_row(
+        let new_today = count(
+            db,
             "SELECT COUNT(*) FROM (
                  SELECT question_id, MIN(reviewed_at) AS first_review
                  FROM review_log GROUP BY question_id
              ) WHERE first_review >= ?",
             params![today_start],
-            |r| r.get(0),
         )?;
-        let total_reviews: i64 =
-            db.query_row("SELECT COUNT(*) FROM review_log", [], |r| r.get(0))?;
+        let total_reviews = count(db, "SELECT COUNT(*) FROM review_log", [])?;
 
         let mut stmt = db.prepare(
             "SELECT substr(due, 1, 10) AS day, COUNT(*) FROM cards

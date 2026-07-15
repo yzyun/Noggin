@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
 import { useQuestions } from "../state/questions";
-import { confirmDialog, useUi } from "../state/ui";
-import { FilterPanel } from "./FilterPanel";
+import { confirmDialog, errorDialog, useUi } from "../state/ui";
+import { DND_QUESTIONS, FilterPanel } from "./FilterPanel";
 import { Markdown } from "./Markdown";
+import { Button } from "./ui/Button";
+import { Callout } from "./ui/Callout";
+import { FolderBadge } from "./ui/chips";
 import { QuestionEditor } from "./QuestionEditor";
 
 export function QuestionsView() {
@@ -80,7 +83,8 @@ export function QuestionsView() {
           </div>
           <div className="flex items-center gap-2">
             {selected.size > 0 && (
-              <button
+              <Button
+                variant="danger"
                 onClick={async () => {
                   const doomed = rows.filter((r) => selected.has(r.id));
                   const ok = await confirmDialog({
@@ -92,20 +96,18 @@ export function QuestionsView() {
                     setSelected(new Set());
                   }
                 }}
-                className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-500"
               >
                 Delete {selected.size}
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={() => {
                 setEditing(null);
                 setMode("edit");
               }}
-              className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover"
             >
               + New question
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -139,7 +141,7 @@ export function QuestionsView() {
                       setEditing({ row, doc: await openDoc(row) });
                       setMode("edit");
                     } catch (e) {
-                      alert(`Could not open ${row.path}: ${e}`);
+                      void errorDialog(`Could not open ${row.path}`, String(e));
                     }
                   }}
                   onDelete={async () => {
@@ -223,7 +225,7 @@ function QuestionCard({
       ref={liRef}
       draggable
       onDragStart={(e) => {
-        e.dataTransfer.setData("application/x-noggin-questions", JSON.stringify(dragIds));
+        e.dataTransfer.setData(DND_QUESTIONS, JSON.stringify(dragIds));
         e.dataTransfer.effectAllowed = "move";
       }}
       className={`rounded-lg border bg-surface ${
@@ -244,11 +246,7 @@ function QuestionCard({
             d{row.difficulty}
           </span>
         )}
-        {row.folder && (
-          <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
-            {row.folder}
-          </span>
-        )}
+        {row.folder && <FolderBadge folder={row.folder} />}
         {row.tags.slice(0, 3).map((t) => (
           <span
             key={t}
@@ -283,16 +281,13 @@ function QuestionCard({
           <Markdown text={doc.question} />
           {doc.answer &&
             (showAnswer ? (
-              <div className="rounded-md border border-green-200 bg-green-50/50 p-2.5 dark:border-green-900 dark:bg-green-950/30">
+              <Callout tone="answer">
                 <Markdown text={doc.answer} />
-              </div>
+              </Callout>
             ) : (
-              <button
-                onClick={() => setShowAnswer(true)}
-                className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              >
+              <Button variant="ghost" onClick={() => setShowAnswer(true)}>
                 Reveal answer
-              </button>
+              </Button>
             ))}
           {row.source && <div className="text-xs text-neutral-400">Source: {row.source}</div>}
         </div>

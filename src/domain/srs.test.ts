@@ -3,8 +3,11 @@ import { Rating } from "ts-fsrs";
 import {
   applyDailyNewLimit,
   fmtInterval,
+  fromFsrsCard,
   gradeCard,
   previewIntervals,
+  toFsrsCard,
+  todayStartIso,
   type CardRow,
 } from "./srs";
 import { DEFAULT_SETTINGS, type SchedulerSettings } from "./settings";
@@ -202,6 +205,42 @@ describe("applyDailyNewLimit", () => {
 
   it("limit 0 means no new cards ever", () => {
     expect(applyDailyNewLimit(queue, 0, 0).filter((e) => e.card.state === "new")).toHaveLength(0);
+  });
+});
+
+describe("CardRow ↔ ts-fsrs Card mapping", () => {
+  it("round-trips a reviewed row through toFsrsCard/fromFsrsCard", () => {
+    const row: CardRow = {
+      question_id: "q1",
+      state: "review",
+      stability: 12.5,
+      difficulty: 6.2,
+      due: "2026-07-20T10:00:00.000Z",
+      reps: 7,
+      lapses: 2,
+      last_review: "2026-07-05T10:00:00.000Z",
+      elapsed_days: 3,
+      scheduled_days: 15,
+      learning_steps: 0,
+    };
+    expect(fromFsrsCard("q1", toFsrsCard(row, NOW))).toEqual(row);
+  });
+
+  it("maps an unseen new row to a fresh FSRS card", () => {
+    const card = toFsrsCard(newCard(), NOW);
+    expect(card.reps).toBe(0);
+    expect(card.stability).toBe(0);
+    expect(card.last_review).toBeUndefined();
+  });
+});
+
+describe("todayStartIso", () => {
+  it("is local midnight of the given day", () => {
+    const d = new Date(2026, 6, 5, 15, 42, 7, 123); // local time
+    const start = new Date(todayStartIso(d));
+    expect([start.getHours(), start.getMinutes(), start.getSeconds(), start.getMilliseconds()])
+      .toEqual([0, 0, 0, 0]);
+    expect([start.getFullYear(), start.getMonth(), start.getDate()]).toEqual([2026, 6, 5]);
   });
 });
 

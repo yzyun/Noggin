@@ -12,7 +12,7 @@ Made for physics & math, where `$E = mc^2$` should just render.
 
 ## Install (macOS)
 
-1. Download **`Noggin_0.7.0_aarch64.dmg`** (or the latest version) from the
+1. Download **`Noggin_0.7.1_aarch64.dmg`** (or the latest version) from the
    [Releases page](https://github.com/yzyun/Noggin/releases) (Apple Silicon).
 2. Open the `.dmg` and drag **Noggin** into **Applications**.
 3. First launch: right-click **Noggin.app → Open → Open**. The app is ad-hoc signed but not
@@ -165,7 +165,7 @@ preferences sync and back up with the vault:
 - **Review sessions** — default max cards, default mode, and a **new-cards-per-day limit**
   so a big import doesn't flood your queue.
 - **Quiz defaults** — default answer placement and metadata visibility for the quiz builder.
-- **Appearance** — the theme picker also lives here.
+- **Appearance** — the theme picker.
 
 ### 📄 Quiz → PDF
 
@@ -202,8 +202,8 @@ Three ways:
 ### 🎨 Themes
 
 Six presets — Light, Dark, Sepia (warm paper + serif), Nord, Forest, and Violet — each
-restyling the accent colour, backgrounds, borders and font. Pick one from the sidebar's
-**Theme** menu or the **Settings** page; your choice persists across launches (and travels
+restyling the accent colour, backgrounds, borders and font. Pick one on the **Settings**
+page (`⌘7`) or via the command palette; your choice persists across launches (and travels
 with the vault).
 
 ---

@@ -9,11 +9,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BodyKind, QuestionRow } from "../domain/types";
 import { useQuestions } from "../state/questions";
-import { confirmDialog, textPrompt } from "../state/ui";
-import { buildFolderTree, type FolderNode } from "../lib/folderTree";
-import { FolderIcon } from "./icons";
+import { confirmDialog, errorDialog, textPrompt } from "../state/ui";
+import { INPUT } from "./ui/Field";
+import { FolderTree } from "./ui/FolderTree";
+import { Segmented } from "./ui/Segmented";
+import { buildFolderTree } from "../lib/folderTree";
 
-const DND_QUESTIONS = "application/x-noggin-questions";
+export const DND_QUESTIONS = "application/x-noggin-questions";
 const DND_FOLDER = "application/x-noggin-folder";
 
 function countIn(rows: QuestionRow[], folder: string): number {
@@ -33,8 +35,6 @@ export function FilterPanel() {
     moveQuestions,
   } = useQuestions();
   const [searchDraft, setSearchDraft] = useState(filters.text);
-  /** Folder path currently hovered by a drag ("" = the All-questions root). */
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   // Debounced search box.
   useEffect(() => {
@@ -69,41 +69,6 @@ export function FilterPanel() {
     if (kept.length !== filters.tags.length) setFilters({ tags: kept });
   }, [tags, filters.tags, setFilters]);
 
-  // --- drag & drop ---------------------------------------------------------
-
-  const dragOver = (target: string) => (e: React.DragEvent) => {
-    const types = [...e.dataTransfer.types];
-    if (types.includes(DND_QUESTIONS) || types.includes(DND_FOLDER)) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.dataTransfer.dropEffect = "move";
-      if (dropTarget !== target) setDropTarget(target);
-    }
-  };
-
-  const drop = (target: string) => (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDropTarget(null);
-
-    const questionData = e.dataTransfer.getData(DND_QUESTIONS);
-    if (questionData) {
-      const ids = new Set<string>(JSON.parse(questionData));
-      const rows = allRows.filter((r) => ids.has(r.id));
-      if (rows.length) void moveQuestions(rows, target).catch((err) => alert(String(err)));
-      return;
-    }
-
-    const src = e.dataTransfer.getData(DND_FOLDER);
-    if (src) {
-      // Not into itself or its own subtree.
-      if (src === target || target.startsWith(`${src}/`)) return;
-      const to = target ? `${target}/${src.split("/").pop()!}` : src.split("/").pop()!;
-      if (to === src) return;
-      void renameFolder(src, to).catch((err) => alert(String(err)));
-    }
-  };
-
   // --- folder actions ------------------------------------------------------
 
   const promptCreate = (parent?: string) => {
@@ -115,7 +80,9 @@ export function FilterPanel() {
         })
       )?.trim();
       if (!name) return;
-      await createFolder(parent ? `${parent}/${name}` : name).catch((e) => alert(String(e)));
+      await createFolder(parent ? `${parent}/${name}` : name).catch((e) =>
+        errorDialog("Couldn't create folder", String(e)),
+      );
     })();
   };
 
@@ -128,7 +95,9 @@ export function FilterPanel() {
         })
       )?.trim();
       if (!next || next === path) return;
-      await renameFolder(path, next).catch((e) => alert(String(e)));
+      await renameFolder(path, next).catch((e) =>
+        errorDialog("Couldn't rename folder", String(e)),
+      );
     })();
   };
 
@@ -142,21 +111,9 @@ export function FilterPanel() {
           : "The folder is empty.",
         confirmLabel: "Delete folder",
       });
-      if (ok) await deleteFolder(path).catch((e) => alert(String(e)));
+      if (ok)
+        await deleteFolder(path).catch((e) => errorDialog("Couldn't delete folder", String(e)));
     })();
-  };
-
-  // Plain click selects one folder (or deselects it); ⌘/Ctrl+click toggles
-  // the folder in/out of a multi-selection.
-  const clickFolder = (path: string) => (e: React.MouseEvent) => {
-    const sel = filters.folders;
-    if (e.metaKey || e.ctrlKey) {
-      setFilters({
-        folders: sel.includes(path) ? sel.filter((f) => f !== path) : [...sel, path],
-      });
-    } else {
-      setFilters({ folders: sel.length === 1 && sel[0] === path ? [] : [path] });
-    }
   };
 
   const hasFilters =
@@ -167,69 +124,6 @@ export function FilterPanel() {
     filters.maxDifficulty !== null ||
     filters.kind !== null;
 
-  const FolderRow = ({ node, depth }: { node: FolderNode; depth: number }) => (
-    <>
-      <div
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData(DND_FOLDER, node.path);
-          e.dataTransfer.effectAllowed = "move";
-        }}
-        onDragOver={dragOver(node.path)}
-        onDragLeave={() => setDropTarget((t) => (t === node.path ? null : t))}
-        onDrop={drop(node.path)}
-        className={`group flex w-full items-center gap-1 rounded pr-1 text-xs ${
-          dropTarget === node.path
-            ? "bg-accent-soft ring-1 ring-accent"
-            : filters.folders.includes(node.path)
-              ? "bg-accent-soft font-medium text-accent-text"
-              : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-        }`}
-      >
-        <button
-          onClick={clickFolder(node.path)}
-          title="⌘/Ctrl+click to select multiple folders"
-          className="flex min-w-0 flex-1 items-center justify-between py-1 text-left"
-          style={{ paddingLeft: `${8 + depth * 12}px` }}
-        >
-          <span className="flex min-w-0 items-center gap-1.5 truncate">
-            <FolderIcon />
-            <span className="truncate">{node.name}</span>
-          </span>
-          <span className="pl-1 text-neutral-400 group-hover:hidden">
-            {countIn(allRows, node.path)}
-          </span>
-        </button>
-        <span className="hidden shrink-0 gap-0.5 group-hover:flex">
-          <button
-            onClick={() => promptCreate(node.path)}
-            title="New subfolder"
-            className="rounded px-1 text-neutral-400 hover:text-accent"
-          >
-            +
-          </button>
-          <button
-            onClick={() => promptRename(node.path)}
-            title="Rename / move"
-            className="rounded px-1 text-neutral-400 hover:text-accent"
-          >
-            ✎
-          </button>
-          <button
-            onClick={() => confirmDelete(node.path)}
-            title="Delete folder"
-            className="rounded px-1 text-neutral-400 hover:text-red-600"
-          >
-            ×
-          </button>
-        </span>
-      </div>
-      {node.children.map((c) => (
-        <FolderRow key={c.path} node={c} depth={depth + 1} />
-      ))}
-    </>
-  );
-
   return (
     <div className="flex w-60 shrink-0 flex-col border-r border-edge">
       {/* Search */}
@@ -238,7 +132,7 @@ export function FilterPanel() {
           value={searchDraft}
           onChange={(e) => setSearchDraft(e.target.value)}
           placeholder="Search questions…"
-          className="w-full rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-accent"
+          className={`w-full ${INPUT}`}
         />
       </div>
 
@@ -255,30 +149,32 @@ export function FilterPanel() {
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto pb-2">
-          <button
-            onClick={() => setFilters({ folders: [] })}
-            onDragOver={dragOver("")}
-            onDragLeave={() => setDropTarget((t) => (t === "" ? null : t))}
-            onDrop={drop("")}
-            className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs ${
-              dropTarget === ""
-                ? "bg-accent-soft ring-1 ring-accent"
-                : filters.folders.length === 0
-                  ? "bg-accent-soft font-medium text-accent-text"
-                  : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            }`}
-          >
-            <span>All questions</span>
-            <span className="text-neutral-400">{allRows.length}</span>
-          </button>
-          {tree.map((n) => (
-            <FolderRow key={n.path} node={n} depth={0} />
-          ))}
-          {tree.length === 0 && (
-            <p className="px-2 py-3 text-center text-xs text-neutral-400">
-              No folders yet — create one with +
-            </p>
-          )}
+          <FolderTree
+            nodes={tree}
+            rootLabel="All questions"
+            rootCount={allRows.length}
+            countFor={(path) => countIn(allRows, path)}
+            selected={filters.folders}
+            onSelect={(folders) => setFilters({ folders })}
+            itemDndType={DND_QUESTIONS}
+            folderDndType={DND_FOLDER}
+            onDropItem={(payload, folder) => {
+              const ids = new Set<string>(JSON.parse(payload));
+              const rows = allRows.filter((r) => ids.has(r.id));
+              if (rows.length)
+                void moveQuestions(rows, folder).catch((err) =>
+                  errorDialog("Couldn't move questions", String(err)),
+                );
+            }}
+            onMoveFolder={(from, to) =>
+              void renameFolder(from, to).catch((err) =>
+                errorDialog("Couldn't move folder", String(err)),
+              )
+            }
+            onCreate={promptCreate}
+            onRename={promptRename}
+            onDelete={confirmDelete}
+          />
         </div>
       </div>
 
@@ -341,21 +237,18 @@ export function FilterPanel() {
 
         <div>
           <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-neutral-400">Kind</span>
-          <div className="flex overflow-hidden rounded-md border border-edge">
-            {([null, "text", "math", "image"] as (BodyKind | null)[]).map((k) => (
-              <button
-                key={k ?? "any"}
-                onClick={() => setFilters({ kind: k })}
-                className={`flex-1 px-1 py-1 text-xs ${
-                  filters.kind === k
-                    ? "bg-accent font-medium text-on-accent"
-                    : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                }`}
-              >
-                {k ?? "any"}
-              </button>
-            ))}
-          </div>
+          <Segmented<BodyKind | "any">
+            grow
+            size="xs"
+            value={filters.kind ?? "any"}
+            options={[
+              ["any", "any"],
+              ["text", "text"],
+              ["math", "math"],
+              ["image", "image"],
+            ]}
+            onChange={(k) => setFilters({ kind: k === "any" ? null : k })}
+          />
         </div>
 
         {hasFilters && (

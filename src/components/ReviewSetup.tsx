@@ -5,18 +5,21 @@
 // Both converge on onStart(entries, mode); the daily new-card limit is
 // applied at every entry point.
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { applyDailyNewLimit, fmtInterval, todayStartIso } from "../domain/srs";
-import type { SessionMode } from "../domain/settings";
-import { ipc, type DueEntry, type ReviewStats, type SearchParams } from "../lib/ipc";
+import { SESSION_MODE_OPTIONS, type SessionMode } from "../domain/settings";
+import { EMPTY_SEARCH, ipc, searchParams, type DueEntry, type ReviewStats, type SearchParams } from "../lib/ipc";
+import { useAsync } from "../lib/useAsync";
 import { useQuestions } from "../state/questions";
 import { useSettings } from "../state/settings";
 import { SubjectSelect } from "./fields/SubjectSelect";
 import { TagInput } from "./fields/TagInput";
+import { Button } from "./ui/Button";
+import { Field, INPUT } from "./ui/Field";
+import { Segmented } from "./ui/Segmented";
 
 type Tab = "due" | "custom";
 
-const LABEL = "mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400";
 const NO_SUBJECT = "(no subject)";
 
 interface SubjectGroup {
@@ -55,11 +58,9 @@ export function ReviewSetup({
   onStart(entries: DueEntry[], mode: SessionMode): void;
 }) {
   const [tab, setTab] = useState<Tab>("due");
-  const [stats, setStats] = useState<ReviewStats | null>(null);
-
-  useEffect(() => {
+  const stats: ReviewStats | null = useAsync(() => {
     const now = new Date();
-    void ipc.reviewStats(now.toISOString(), todayStartIso(now)).then(setStats).catch(() => {});
+    return ipc.reviewStats(now.toISOString(), todayStartIso(now));
   }, []);
 
   const newToday = stats?.new_today ?? 0;
@@ -94,26 +95,16 @@ export function ReviewSetup({
         )}
 
         {/* Tabs */}
-        <div className="flex w-fit overflow-hidden rounded-md border border-edge">
-          {(
-            [
-              ["due", "Due now"],
-              ["custom", "Custom session"],
-            ] as [Tab, string][]
-          ).map(([t, label]) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-1.5 text-xs ${
-                tab === t
-                  ? "bg-accent font-medium text-on-accent"
-                  : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented<Tab>
+          size="md"
+          className="w-fit"
+          value={tab}
+          options={[
+            ["due", "Due now"],
+            ["custom", "Custom session"],
+          ]}
+          onChange={setTab}
+        />
 
         {tab === "due" ? (
           <DueDashboard newToday={newToday} onStart={onStart} />
@@ -137,20 +128,10 @@ function DueDashboard({
   onStart(entries: DueEntry[], mode: SessionMode): void;
 }) {
   const session = useSettings((s) => s.settings.session);
-  const [entries, setEntries] = useState<DueEntry[] | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const now = useMemo(() => new Date(), []);
 
-  useEffect(() => {
-    let alive = true;
-    void ipc
-      .cardsDue({ text: null, folder: null, tags: [], body_kind: null }, new Date().toISOString(), 10_000)
-      .then((es) => alive && setEntries(es))
-      .catch(() => alive && setEntries([]));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const entries = useAsync(() => ipc.cardsDue(EMPTY_SEARCH).catch(() => []), []);
 
   const groups = useMemo(() => (entries ? groupBySubject(entries) : []), [entries]);
 
@@ -208,13 +189,14 @@ function DueDashboard({
                     {g.due.length} due · {g.fresh.length} new
                   </span>
                 </button>
-                <button
+                <Button
+                  variant="ghost"
+                  className="shrink-0"
                   onClick={() => onStart(subjectSession, session.defaultMode)}
                   disabled={subjectSession.length === 0}
-                  className="shrink-0 rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 disabled:opacity-40 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 >
                   Review
-                </button>
+                </Button>
               </div>
               {open && (
                 <ul className="space-y-0.5 px-3 pb-2 pl-9">
@@ -244,15 +226,16 @@ function DueDashboard({
         })}
       </div>
 
-      <button
+      <Button
+        size="lg"
+        className="w-full"
         onClick={() => onStart(allSession, session.defaultMode)}
         disabled={allSession.length === 0}
-        className="w-full rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm transition hover:bg-accent-hover disabled:opacity-40"
       >
         {allSession.length === 0
           ? "Nothing to review 🎉"
           : `Review all (${allSession.length} card${allSession.length > 1 ? "s" : ""})`}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -274,23 +257,13 @@ function CustomSession({
   const [tags, setTags] = useState<string[]>([]);
   const [mode, setMode] = useState<SessionMode>(session.defaultMode);
   const [limit, setLimit] = useState(session.defaultMaxCards);
-  const [entries, setEntries] = useState<DueEntry[] | null>(null);
 
   const params: SearchParams = useMemo(
-    () => ({ text: null, folder: subject.trim() || null, tags, body_kind: null }),
+    () => searchParams({ folder: subject.trim() || null, tags }),
     [subject, tags],
   );
 
-  useEffect(() => {
-    let alive = true;
-    void ipc
-      .cardsDue(params, new Date().toISOString(), 10_000)
-      .then((es) => alive && setEntries(es))
-      .catch(() => alive && setEntries(null));
-    return () => {
-      alive = false;
-    };
-  }, [params]);
+  const entries = useAsync(() => ipc.cardsDue(params), [params]);
 
   const queue = entries
     ? applyDailyNewLimit(entries, newToday, session.dailyNewLimit).slice(0, limit)
@@ -298,63 +271,40 @@ function CustomSession({
 
   return (
     <div className="space-y-4">
-      <label className="block">
-        <span className={LABEL}>Subject (leave empty for all)</span>
+      <Field label="Subject (leave empty for all)">
         <SubjectSelect value={subject} onChange={setSubject} recent={recentFolders()} />
-      </label>
-      <label className="block">
-        <span className={LABEL}>Tags</span>
+      </Field>
+      <Field label="Tags" as="div">
         <TagInput value={tags} onChange={setTags} suggestions={allTags()} />
-      </label>
+      </Field>
       <div className="flex items-end gap-4">
-        <label className="block">
-          <span className={LABEL}>Mode</span>
-          <div className="flex overflow-hidden rounded-md border border-edge">
-            {(
-              [
-                ["auto", "Per question"],
-                ["flashcard", "Flashcard"],
-                ["typein", "Type-in"],
-              ] as [SessionMode, string][]
-            ).map(([m, label]) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={`px-3 py-1.5 text-xs ${
-                  mode === m
-                    ? "bg-accent font-medium text-on-accent"
-                    : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </label>
-        <label className="block">
-          <span className={LABEL}>Max cards</span>
+        <Field label="Mode" as="div">
+          <Segmented<SessionMode> value={mode} options={SESSION_MODE_OPTIONS} onChange={setMode} />
+        </Field>
+        <Field label="Max cards">
           <input
             type="number"
             min={1}
             max={500}
             value={limit}
             onChange={(e) => setLimit(Math.max(1, Number(e.target.value) || session.defaultMaxCards))}
-            className="w-20 rounded-md border border-edge bg-surface px-2 py-1.5 text-sm"
+            className={`w-20 ${INPUT}`}
           />
-        </label>
+        </Field>
       </div>
 
-      <button
+      <Button
+        size="lg"
+        className="w-full"
         onClick={() => queue && queue.length > 0 && onStart(queue, mode)}
         disabled={!queue || queue.length === 0}
-        className="w-full rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm transition hover:bg-accent-hover disabled:opacity-40"
       >
         {queue === null
           ? "…"
           : queue.length === 0
             ? "Nothing due for this deck 🎉"
             : `Start reviewing ${queue.length} card${queue.length > 1 ? "s" : ""}`}
-      </button>
+      </Button>
     </div>
   );
 }

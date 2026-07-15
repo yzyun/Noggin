@@ -2,7 +2,7 @@
 // images. Fenced code blocks whose language matches a registered content
 // renderer (TikZ, Mermaid… in later phases) are routed through the registry.
 
-import { memo, useEffect, useState } from "react";
+import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -11,25 +11,17 @@ import "katex/dist/katex.min.css";
 
 import { contentRenderers } from "../domain/registries";
 import { normalizeImageSrc, vaultImageUrl } from "../lib/images";
+import { useAsync } from "../lib/useAsync";
+
+const FAILED = "__image-load-failed__";
 
 function VaultImage({ src, alt }: { src?: string; alt?: string }) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-
   const rel = src ? normalizeImageSrc(src) : null;
-
-  useEffect(() => {
-    let alive = true;
-    setFailed(false);
-    if (!rel) return;
-    vaultImageUrl(rel).then(
-      (u) => alive && setUrl(u),
-      () => alive && setFailed(true),
-    );
-    return () => {
-      alive = false;
-    };
-  }, [rel]);
+  const url = useAsync(
+    () => (rel ? vaultImageUrl(rel).catch(() => FAILED) : Promise.resolve(null)),
+    [rel],
+  );
+  const failed = url === FAILED;
 
   if (!src) return null;
   if (rel === null) {

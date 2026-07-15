@@ -3,8 +3,8 @@
 // Saving = serialize markdown → write file → mirror into the SQLite index.
 
 import { create } from "zustand";
-import { ipc } from "../lib/ipc";
-import { deriveBodyKind, parseQuestionFile, serializeQuestionFile } from "../domain/format";
+import { ipc, searchParams } from "../lib/ipc";
+import { deriveBodyKind, serializeQuestionFile } from "../domain/format";
 import { effectiveTitle, slugify } from "../domain/title";
 import type { BodyKind, QuestionDoc, QuestionRow } from "../domain/types";
 import { useVault } from "./vault";
@@ -73,14 +73,14 @@ function questionPath(doc: QuestionDoc, folder: string): string {
 }
 
 function toSearchParams(f: Filters) {
-  return {
+  return searchParams({
     text: f.text.trim() || null,
     folders: f.folders,
     tags: f.tags,
     min_difficulty: f.minDifficulty,
     max_difficulty: f.maxDifficulty,
     body_kind: f.kind,
-  };
+  });
 }
 
 /** Parse one file and mirror it into the index. Returns false if the file
@@ -88,7 +88,7 @@ function toSearchParams(f: Filters) {
 async function indexFile(rel: string, mtime: number): Promise<boolean> {
   let doc: QuestionDoc;
   try {
-    doc = parseQuestionFile(await ipc.readFile(rel));
+    doc = await ipc.readDoc(rel);
   } catch {
     return false; // not a question file / malformed — ignore
   }
@@ -216,7 +216,7 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
   },
 
   async openDoc(row) {
-    return parseQuestionFile(await ipc.readFile(row.path));
+    return ipc.readDoc(row.path);
   },
 
   async removeMany(rows) {

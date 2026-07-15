@@ -10,11 +10,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ipc, type DirEntry } from "../lib/ipc";
 import { slugify } from "../domain/title";
-import { confirmDialog, textPrompt } from "../state/ui";
-import { buildFolderTree, type FolderNode } from "../lib/folderTree";
+import { confirmDialog, errorDialog, textPrompt } from "../state/ui";
+import { Button } from "./ui/Button";
+import { FolderTree } from "./ui/FolderTree";
+import { buildFolderTree } from "../lib/folderTree";
 import { MarkdownField } from "./fields/MarkdownField";
 import { Markdown } from "./Markdown";
-import { FolderIcon } from "./icons";
 
 interface LibraryConfig {
   /** Vault dir this library lives in ("notes", "papers"). */
@@ -82,8 +83,6 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
   const [folderDirs, setFolderDirs] = useState<string[]>([]);
   /** Selected folders (empty = all). ⌘/Ctrl+click multi-selects. */
   const [selFolders, setSelFolders] = useState<string[]>([]);
-  /** Folder path currently hovered by a drag ("" = the root row). */
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [openRel, setOpenRel] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -137,18 +136,6 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
     (folder: string) => files.filter((f) => inSubtree(folderOf(f.rel), folder)).length,
     [files, folderOf],
   );
-
-  // Plain click selects one folder (or deselects it); ⌘/Ctrl+click toggles
-  // the folder in/out of a multi-selection.
-  const clickFolder = (path: string) => (e: React.MouseEvent) => {
-    if (e.metaKey || e.ctrlKey) {
-      setSelFolders((sel) =>
-        sel.includes(path) ? sel.filter((f) => f !== path) : [...sel, path],
-      );
-    } else {
-      setSelFolders((sel) => (sel.length === 1 && sel[0] === path ? [] : [path]));
-    }
-  };
 
   // Revoke the PDF blob URL when it's replaced or the view unmounts.
   useEffect(() => {
@@ -267,7 +254,7 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
       if (!name) return;
       await ipc
         .createDir(`${cfg.root}/${parent ? `${parent}/` : ""}${name.replace(/^\/+|\/+$/g, "")}`)
-        .catch((e) => alert(String(e)));
+        .catch((e) => errorDialog("Couldn't create folder", String(e)));
       await refresh();
     })();
   };
@@ -286,7 +273,7 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
       try {
         await ipc.renamePath(`${cfg.root}/${path}`, `${cfg.root}/${next}`);
       } catch (e) {
-        alert(String(e));
+        void errorDialog("Couldn't rename folder", String(e));
         return;
       }
       // Follow the rename if the selection / open file lived inside.
@@ -309,7 +296,9 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
         confirmLabel: "Delete folder",
       });
       if (!ok) return;
-      await ipc.deleteFolder(`${cfg.root}/${path}`).catch((e) => alert(String(e)));
+      await ipc
+        .deleteFolder(`${cfg.root}/${path}`)
+        .catch((e) => errorDialog("Couldn't delete folder", String(e)));
       remapSelection(path, null);
       // Contents moved up (possibly renamed on collision) — close the open
       // file if it lived inside rather than guess its new path.
@@ -318,106 +307,18 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
     })();
   };
 
-  // --- drag & drop ---------------------------------------------------------
-
-  const dragOver = (target: string) => (e: React.DragEvent) => {
-    const types = [...e.dataTransfer.types];
-    if (types.includes(DND_FILE) || types.includes(DND_DIR)) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.dataTransfer.dropEffect = "move";
-      if (dropTarget !== target) setDropTarget(target);
-    }
+  /** Folder move (drag or rename target): rename on disk, then keep the
+   *  selection and any open file pointing at the moved paths. */
+  const moveFolder = (from: string, to: string) => {
+    void (async () => {
+      await ipc.renamePath(`${cfg.root}/${from}`, `${cfg.root}/${to}`);
+      remapSelection(from, to);
+      if (openRel && openRel.startsWith(`${cfg.root}/${from}/`)) {
+        setOpenRel(`${cfg.root}/${to}/${openRel.slice(`${cfg.root}/${from}/`.length)}`);
+      }
+      await refresh();
+    })().catch((err) => errorDialog("Couldn't move folder", String(err)));
   };
-
-  const drop = (target: string) => (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDropTarget(null);
-
-    const fileRel = e.dataTransfer.getData(DND_FILE);
-    if (fileRel) {
-      void moveFile(fileRel, target).catch((err) => alert(String(err)));
-      return;
-    }
-
-    const src = e.dataTransfer.getData(DND_DIR);
-    if (src) {
-      // Not into itself or its own subtree.
-      if (src === target || target.startsWith(`${src}/`)) return;
-      const to = target ? `${target}/${src.split("/").pop()!}` : src.split("/").pop()!;
-      if (to === src) return;
-      void (async () => {
-        await ipc.renamePath(`${cfg.root}/${src}`, `${cfg.root}/${to}`);
-        remapSelection(src, to);
-        if (openRel && openRel.startsWith(`${cfg.root}/${src}/`)) {
-          setOpenRel(`${cfg.root}/${to}/${openRel.slice(`${cfg.root}/${src}/`.length)}`);
-        }
-        await refresh();
-      })().catch((err) => alert(String(err)));
-    }
-  };
-
-  const FolderRow = ({ node, depth }: { node: FolderNode; depth: number }) => (
-    <>
-      <div
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData(DND_DIR, node.path);
-          e.dataTransfer.effectAllowed = "move";
-        }}
-        onDragOver={dragOver(node.path)}
-        onDragLeave={() => setDropTarget((t) => (t === node.path ? null : t))}
-        onDrop={drop(node.path)}
-        className={`group flex w-full items-center gap-1 rounded pr-1 text-xs ${
-          dropTarget === node.path
-            ? "bg-accent-soft ring-1 ring-accent"
-            : selFolders.includes(node.path)
-              ? "bg-accent-soft font-medium text-accent-text"
-              : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-        }`}
-      >
-        <button
-          onClick={clickFolder(node.path)}
-          title="⌘/Ctrl+click to select multiple folders"
-          className="flex min-w-0 flex-1 items-center justify-between py-1 text-left"
-          style={{ paddingLeft: `${8 + depth * 12}px` }}
-        >
-          <span className="flex min-w-0 items-center gap-1.5">
-            <FolderIcon />
-            <span className="truncate">{node.name}</span>
-          </span>
-          <span className="pl-1 text-neutral-400 group-hover:hidden">{countIn(node.path)}</span>
-        </button>
-        <span className="hidden shrink-0 gap-0.5 group-hover:flex">
-          <button
-            onClick={() => promptCreateFolder(node.path)}
-            title="New subfolder"
-            className="rounded px-1 text-neutral-400 hover:text-accent"
-          >
-            +
-          </button>
-          <button
-            onClick={() => promptRenameFolder(node.path)}
-            title="Rename / move"
-            className="rounded px-1 text-neutral-400 hover:text-accent"
-          >
-            ✎
-          </button>
-          <button
-            onClick={() => confirmDeleteFolder(node.path)}
-            title="Delete folder"
-            className="rounded px-1 text-neutral-400 hover:text-red-600"
-          >
-            ×
-          </button>
-        </span>
-      </div>
-      {node.children.map((c) => (
-        <FolderRow key={c.path} node={c} depth={depth + 1} />
-      ))}
-    </>
-  );
 
   const openName = openRel?.split("/").pop() ?? "";
 
@@ -476,30 +377,25 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
             </button>
           </div>
           <div className="max-h-48 overflow-y-auto">
-            <button
-              onClick={() => setSelFolders([])}
-              onDragOver={dragOver("")}
-              onDragLeave={() => setDropTarget((t) => (t === "" ? null : t))}
-              onDrop={drop("")}
-              className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs ${
-                dropTarget === ""
-                  ? "bg-accent-soft ring-1 ring-accent"
-                  : selFolders.length === 0
-                    ? "bg-accent-soft font-medium text-accent-text"
-                    : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              }`}
-            >
-              <span>All {cfg.noun}s</span>
-              <span className="text-neutral-400">{files.length}</span>
-            </button>
-            {tree.map((n) => (
-              <FolderRow key={n.path} node={n} depth={0} />
-            ))}
-            {tree.length === 0 && (
-              <p className="px-2 py-2 text-center text-xs text-neutral-400">
-                No folders yet — create one with +
-              </p>
-            )}
+            <FolderTree
+              nodes={tree}
+              rootLabel={`All ${cfg.noun}s`}
+              rootCount={files.length}
+              countFor={countIn}
+              selected={selFolders}
+              onSelect={setSelFolders}
+              itemDndType={DND_FILE}
+              folderDndType={DND_DIR}
+              onDropItem={(fileRel, folder) =>
+                void moveFile(fileRel, folder).catch((err) =>
+                  errorDialog(`Couldn't move ${cfg.noun}`, String(err)),
+                )
+              }
+              onMoveFolder={moveFolder}
+              onCreate={promptCreateFolder}
+              onRename={promptRenameFolder}
+              onDelete={confirmDeleteFolder}
+            />
           </div>
         </div>
 
@@ -573,21 +469,13 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
               {openExt !== "pdf" && (
                 <div className="flex gap-2">
                   {openExt === "md" && (
-                    <button
-                      onClick={() => setPreview((p) => !p)}
-                      className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                    >
+                    <Button variant="ghost" onClick={() => setPreview((p) => !p)}>
                       {preview ? "Edit" : "Preview"}
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    onClick={saveFile}
-                    disabled={!dirty}
-                    className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40"
-                    title="Cmd/Ctrl+S"
-                  >
+                  <Button onClick={saveFile} disabled={!dirty} title="Cmd/Ctrl+S">
                     Save
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

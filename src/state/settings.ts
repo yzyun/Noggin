@@ -6,7 +6,7 @@
 import { create } from "zustand";
 import { ipc } from "../lib/ipc";
 import { setTheme } from "../lib/theme";
-import { DEFAULT_SETTINGS, normalizeSettings, type AppSettings } from "../domain/settings";
+import { DEFAULT_SETTINGS, isRecord, normalizeSettings, type AppSettings } from "../domain/settings";
 
 const CONFIG_PATH = ".studydb/config.json";
 const SAVE_DEBOUNCE_MS = 500;
@@ -26,29 +26,53 @@ export type SettingsPatch = {
     : AppSettings[K];
 };
 
-const isPlainObject = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
-
 function deepMerge<T>(base: T, patch: unknown): T {
-  if (!isPlainObject(base) || !isPlainObject(patch)) {
+  if (!isRecord(base) || !isRecord(patch)) {
     return (patch === undefined ? base : patch) as T;
   }
   const out: Record<string, unknown> = { ...base };
   for (const [k, v] of Object.entries(patch)) {
-    out[k] = isPlainObject(v) && isPlainObject(out[k]) ? deepMerge(out[k], v) : v;
+    out[k] = isRecord(v) && isRecord(out[k]) ? deepMerge(out[k], v) : v;
   }
   return out as T;
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let pending: AppSettings | null = null;
+
+function writeNow(settings: AppSettings): Promise<void> {
+  return ipc
+    .writeFile(CONFIG_PATH, JSON.stringify(settings, null, 2) + "\n")
+    .catch((e) => console.error("failed to save settings:", e));
+}
+
 function scheduleSave(settings: AppSettings) {
+  pending = settings;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
-    ipc
-      .writeFile(CONFIG_PATH, JSON.stringify(settings, null, 2) + "\n")
-      .catch((e) => console.error("failed to save settings:", e));
+    const s = pending;
+    pending = null;
+    if (s) void writeNow(s);
   }, SAVE_DEBOUNCE_MS);
+}
+
+/** Write any debounced-but-unwritten settings immediately. Must run BEFORE
+ *  ipc.closeVault(), so the write still targets the vault it belongs to. */
+export async function flushPendingSave(): Promise<void> {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  const s = pending;
+  pending = null;
+  if (s) await writeNow(s);
+}
+
+/** Drop any pending write unsaved — a stale timer at vault-load time
+ *  belongs to the previous vault and must not touch the new one. */
+function discardPendingSave(): void {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = null;
+  pending = null;
 }
 
 interface SettingsStore {
@@ -65,6 +89,7 @@ export const useSettings = create<SettingsStore>((set, get) => ({
   loaded: false,
 
   load: async () => {
+    discardPendingSave();
     let settings = DEFAULT_SETTINGS;
     try {
       settings = normalizeSettings(JSON.parse(await ipc.readFile(CONFIG_PATH)));

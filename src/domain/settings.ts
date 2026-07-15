@@ -50,6 +50,19 @@ export interface AppSettings {
   };
 }
 
+/** Shared picker labels — every SessionMode / AnswerPlacement UI uses these. */
+export const SESSION_MODE_OPTIONS: [SessionMode, string][] = [
+  ["auto", "Per question"],
+  ["flashcard", "Flashcard"],
+  ["typein", "Type-in"],
+];
+
+export const ANSWER_PLACEMENT_OPTIONS: [AnswerPlacement, string][] = [
+  ["none", "None"],
+  ["inline", "Under each"],
+  ["key", "Key at end"],
+];
+
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: 2,
   theme: "light",
@@ -79,7 +92,7 @@ export function parseDuration(s: string): number | null {
   return n * unit;
 }
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
+export const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
 function num(v: unknown, def: number, min: number, max: number): number {

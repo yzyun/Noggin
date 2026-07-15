@@ -26,6 +26,8 @@ export interface ConfirmRequest {
   message?: string;
   /** Label for the confirming button (default "Delete"). */
   confirmLabel?: string;
+  /** "danger" (default) = red confirm + Cancel; "info" = accent OK, no Cancel. */
+  variant?: "danger" | "info";
   /** Called exactly once: true = confirmed, false = cancelled. */
   resolve(ok: boolean): void;
 }
@@ -71,14 +73,13 @@ export const useUi = create<UiStore>((set, get) => ({
   clearFocusQuestion: () => set({ focusQuestionId: null }),
 }));
 
-/** In-app replacement for window.prompt (unsupported in WKWebView).
- *  Resolves with the entered string, or null if cancelled. */
 /** In-app replacement for window.confirm (unreliable in WKWebView).
  *  Resolves true if the user confirms, false otherwise. */
 export function confirmDialog(opts: {
   title: string;
   message?: string;
   confirmLabel?: string;
+  variant?: "danger" | "info";
 }): Promise<boolean> {
   return new Promise((resolve) => {
     useUi.setState({
@@ -93,6 +94,16 @@ export function confirmDialog(opts: {
   });
 }
 
+/** Error notice with a single OK button — replaces native alert(), which is
+ *  as unreliable in Tauri's WKWebView as window.confirm/prompt. */
+export function errorDialog(title: string, message?: string): Promise<void> {
+  return confirmDialog({ title, message, confirmLabel: "OK", variant: "info" }).then(
+    () => undefined,
+  );
+}
+
+/** In-app replacement for window.prompt (unsupported in WKWebView).
+ *  Resolves with the entered string, or null if cancelled. */
 export function textPrompt(opts: {
   title: string;
   initial?: string;

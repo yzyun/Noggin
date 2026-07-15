@@ -8,6 +8,8 @@ pub enum Error {
     #[error(transparent)]
     Sql(#[from] rusqlite::Error),
     #[error(transparent)]
+    Json(#[from] serde_json::Error),
+    #[error(transparent)]
     Tauri(#[from] tauri::Error),
     #[error(transparent)]
     Watch(#[from] notify::Error),

@@ -1,11 +1,10 @@
 // Main app layout once a vault is open: sidebar navigation + content area.
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useVault } from "../state/vault";
 import { useQuestions } from "../state/questions";
 import { useSettings } from "../state/settings";
 import { useUi, type View } from "../state/ui";
-import { currentTheme, THEMES } from "../lib/theme";
 import { startVaultWatch } from "../lib/watch";
 import { handleGlobalShortcut, registerCoreCommands } from "../lib/commands";
 import { CommandPalette } from "./CommandPalette";
@@ -26,55 +25,7 @@ const NAV: { id: View; label: string }[] = [
   { id: "review", label: "Review" },
   { id: "quiz", label: "Quiz" },
   { id: "import", label: "Import" },
-  { id: "settings", label: "Settings" },
 ];
-
-function ThemeMenu() {
-  const [open, setOpen] = useState(false);
-  const [, rerender] = useState(0);
-  const active = currentTheme();
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
-      >
-        Theme
-        <span
-          className="h-3 w-3 rounded-full border border-edge"
-          style={{ background: THEMES.find((t) => t.id === active)?.swatch }}
-        />
-      </button>
-      {open && (
-        <div className="absolute bottom-full left-2 z-40 mb-1 w-48 rounded-lg border border-edge bg-surface p-1 shadow-xl">
-          {THEMES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => {
-                // Through the settings store so config.json stays in sync.
-                useSettings.getState().update({ theme: t.id });
-                setOpen(false);
-                rerender((n) => n + 1);
-              }}
-              className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm ${
-                active === t.id
-                  ? "bg-accent-soft font-medium text-accent-text"
-                  : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              }`}
-            >
-              <span
-                className="h-4 w-4 rounded-full border border-neutral-400/40"
-                style={{ background: `linear-gradient(135deg, ${t.bg} 50%, ${t.swatch} 50%)` }}
-              />
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function Shell() {
   const { root, stats, close } = useVault();
@@ -94,7 +45,7 @@ export function Shell() {
     return () => cleanup?.();
   }, [root]);
 
-  // Global shortcuts (⌘K palette, ⌘P search, ⌘N, ⌘1–5).
+  // Global shortcuts (⌘K palette, ⌘P search, ⌘N, ⌘1–7).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (handleGlobalShortcut(e)) e.preventDefault();
@@ -148,7 +99,16 @@ export function Shell() {
           >
             Commands <span className="text-[10px] text-neutral-400">⌘K</span>
           </button>
-          <ThemeMenu />
+          <button
+            onClick={() => setView("settings")}
+            className={`flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm ${
+              view === "settings"
+                ? "bg-accent-soft font-medium text-accent-text"
+                : "text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            }`}
+          >
+            Settings <span className="text-[10px] text-neutral-400">⌘7</span>
+          </button>
           <button
             onClick={close}
             className="w-full rounded-md px-3 py-1.5 text-left text-sm text-neutral-600 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"

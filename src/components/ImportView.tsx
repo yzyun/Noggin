@@ -18,6 +18,7 @@ import { deriveTitle } from "../domain/title";
 import { useQuestions } from "../state/questions";
 import { Markdown } from "./Markdown";
 import { SubjectSelect } from "./fields/SubjectSelect";
+import { Button } from "./ui/Button";
 import { TagInput } from "./fields/TagInput";
 // The full format spec, rendered inline below so nobody has to hunt for the file.
 import formatSpec from "../../QUESTION_FORMAT.md?raw";
@@ -271,7 +272,7 @@ export function ImportView() {
               </div>
               <div className="max-h-80 overflow-y-auto rounded-lg border border-edge">
                 <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-neutral-50">
+                  <thead className="sticky top-0 bg-neutral-50 dark:bg-neutral-900">
                     <tr className="text-left text-neutral-500 dark:text-neutral-400">
                       <th className="px-2 py-1.5">#</th>
                       <th className="px-2 py-1.5">Status</th>
@@ -317,15 +318,11 @@ export function ImportView() {
               </div>
             </div>
 
-            <button
-              onClick={commit}
-              disabled={busy || toImport.length === 0}
-              className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm hover:bg-accent-hover disabled:opacity-40"
-            >
+            <Button size="lg" onClick={commit} disabled={busy || toImport.length === 0}>
               {busy
                 ? "Importing…"
                 : `Import ${toImport.length} question${toImport.length === 1 ? "" : "s"}`}
-            </button>
+            </Button>
           </>
         )}
       </div>

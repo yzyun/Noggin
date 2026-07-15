@@ -2,7 +2,8 @@
 // Keep all `invoke` strings in this one file.
 
 import { invoke } from "@tauri-apps/api/core";
-import type { IndexStats, QuestionRow } from "../domain/types";
+import { parseQuestionFile } from "../domain/format";
+import type { IndexStats, QuestionDoc, QuestionRow } from "../domain/types";
 import type { CardRow, ReviewLogEntry } from "../domain/srs";
 
 export interface DueEntry {
@@ -56,6 +57,9 @@ export const ipc = {
   indexStats: () => invoke<IndexStats>("index_stats"),
 
   readFile: (rel: string) => invoke<string>("vault_read_file", { rel }),
+  /** Read + parse a question .md file in one step. */
+  readDoc: async (rel: string): Promise<QuestionDoc> =>
+    parseQuestionFile(await invoke<string>("vault_read_file", { rel })),
   writeFile: (rel: string, contents: string) =>
     invoke<void>("vault_write_file", { rel, contents }),
   writeBinary: (rel: string, contents: number[]) =>
@@ -76,7 +80,7 @@ export const ipc = {
   deleteFolder: (rel: string) => invoke<void>("vault_delete_folder", { rel }),
   listDirs: (rel: string) => invoke<string[]>("vault_list_dirs", { rel }),
 
-  cardsDue: (params: SearchParams, now: string, limit: number) =>
+  cardsDue: (params: SearchParams, now: string = new Date().toISOString(), limit = 10_000) =>
     invoke<DueEntry[]>("cards_due", { params, now, limit }),
   cardUpdate: (card: CardRow) => invoke<void>("card_update", { card }),
   reviewLogAdd: (entry: ReviewLogEntry) => invoke<void>("review_log_add", { entry }),
@@ -99,3 +103,17 @@ export interface SearchParams {
   max_difficulty?: number | null;
   body_kind?: string | null;
 }
+
+/** "Everything" — the base other filters spread over. */
+export const EMPTY_SEARCH: SearchParams = {
+  text: null,
+  folder: null,
+  folders: [],
+  tags: [],
+  body_kind: null,
+};
+
+export const searchParams = (p: Partial<SearchParams>): SearchParams => ({
+  ...EMPTY_SEARCH,
+  ...p,
+});

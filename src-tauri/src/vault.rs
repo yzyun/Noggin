@@ -18,26 +18,10 @@ const INDEX_FILE: &str = "index.sqlite";
 const CONFIG_FILE: &str = "config.json";
 const VAULT_SUBDIRS: [&str; 4] = ["questions", "notes", "papers", "attachments"];
 
-// Keep in sync with DEFAULT_SETTINGS in src/domain/settings.ts. Only written
-// when the file is absent; the frontend owns it afterwards.
-const DEFAULT_CONFIG: &str = r#"{
-  "schemaVersion": 2,
-  "theme": "light",
-  "scheduler": {
-    "mode": "fsrs",
-    "fsrs": {
-      "requestRetention": 0.9,
-      "maximumIntervalDays": 36500,
-      "enableFuzz": true,
-      "learningSteps": ["1m", "10m"],
-      "relearningSteps": ["10m"]
-    },
-    "manual": { "again": "10m", "hard": "1d", "good": "3d", "easy": "7d", "growthFactor": 2.0 }
-  },
-  "session": { "defaultMaxCards": 20, "defaultMode": "auto", "dailyNewLimit": 20 },
-  "quiz": { "defaultAnswers": "key", "defaultShowMeta": false }
-}
-"#;
+// Written only when the file is absent, and never read by Rust. An empty
+// object is a complete config: the frontend's normalizeSettings() expands {}
+// to full defaults (covered by src/domain/settings.test.ts).
+const DEFAULT_CONFIG: &str = "{}\n";
 
 /// An open vault: root folder + live SQLite connection + fs watcher.
 pub struct OpenVault {
@@ -66,7 +50,7 @@ fn resolve(root: &Path, rel: &str) -> Result<PathBuf> {
 }
 
 /// Run `f` with the open vault, or fail if none is open.
-fn with_vault<T>(state: &State<'_, AppState>, f: impl FnOnce(&OpenVault) -> Result<T>) -> Result<T> {
+pub(crate) fn with_vault<T>(state: &State<'_, AppState>, f: impl FnOnce(&OpenVault) -> Result<T>) -> Result<T> {
     let guard = state.0.lock().map_err(|_| Error::msg("state lock poisoned"))?;
     match guard.as_ref() {
         Some(v) => f(v),

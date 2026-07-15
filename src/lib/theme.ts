@@ -1,6 +1,11 @@
 // Theme presets: each sets the design-token CSS vars (accent, surfaces,
 // font — see index.css) via html[data-theme]; dark-based themes also set
-// the `dark` class so `dark:` neutral variants apply. Persisted locally.
+// the `dark` class so `dark:` neutral variants apply.
+//
+// Persistence is deliberately dual: localStorage is only a boot-time cache
+// so the first paint has the right theme before any vault opens; the
+// vault's .studydb/config.json (settings store) is authoritative and
+// re-applies via setTheme() when the vault loads.
 
 const KEY = "studydb.theme";
 
@@ -22,10 +27,6 @@ export const THEMES: ThemePreset[] = [
   { id: "forest", label: "Forest", dark: false, swatch: "#16a34a", bg: "#f4f9f4" },
   { id: "violet", label: "Violet", dark: true, swatch: "#8b5cf6", bg: "#1c1430" },
 ];
-
-export function currentTheme(): string {
-  return document.documentElement.dataset.theme ?? "light";
-}
 
 export function setTheme(id: string): void {
   const preset = THEMES.find((t) => t.id === id) ?? THEMES[0];

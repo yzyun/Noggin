@@ -1,6 +1,7 @@
 // First-launch screen: choose (or create) the vault folder.
 
 import { useVault } from "../state/vault";
+import { Button } from "./ui/Button";
 
 export function VaultPicker() {
   const { pickAndOpen, error } = useVault();
@@ -16,12 +17,9 @@ export function VaultPicker() {
         </p>
       </div>
 
-      <button
-        onClick={pickAndOpen}
-        className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm transition hover:bg-accent-hover active:bg-accent-hover"
-      >
+      <Button size="lg" onClick={pickAndOpen}>
         Choose vault folder…
-      </button>
+      </Button>
 
       {error && (
         <p className="max-w-md text-center text-sm text-red-600 dark:text-red-400">{error}</p>

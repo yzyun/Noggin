@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { ipc } from "../lib/ipc";
+import { flushPendingSave } from "./settings";
 import type { IndexStats } from "../domain/types";
 
 interface VaultStore {
@@ -58,6 +59,8 @@ export const useVault = create<VaultStore>((set, get) => ({
   },
 
   async close() {
+    // Land any debounced settings edit in the vault it belongs to.
+    await flushPendingSave();
     await ipc.closeVault();
     set({ root: null, stats: null });
   },

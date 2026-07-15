@@ -3,12 +3,15 @@
 // store, which persists to the vault's .studydb/config.json.
 
 import { useEffect, useState } from "react";
-import { parseDuration, type SessionMode } from "../domain/settings";
+import {
+  ANSWER_PLACEMENT_OPTIONS,
+  parseDuration,
+  SESSION_MODE_OPTIONS,
+} from "../domain/settings";
 import { THEMES } from "../lib/theme";
 import { useSettings } from "../state/settings";
-
-const LABEL = "mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400";
-const INPUT = "rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm";
+import { INPUT, LABEL } from "./ui/Field";
+import { Segmented } from "./ui/Segmented";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -16,34 +19,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h3 className="mb-3 text-sm font-semibold">{title}</h3>
       <div className="space-y-4 rounded-lg border border-edge bg-surface p-4">{children}</div>
     </section>
-  );
-}
-
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-}: {
-  value: T;
-  options: [T, string][];
-  onChange(v: T): void;
-}) {
-  return (
-    <div className="flex overflow-hidden rounded-md border border-edge">
-      {options.map(([v, label]) => (
-        <button
-          key={v}
-          onClick={() => onChange(v)}
-          className={`flex-1 px-3 py-1.5 text-xs whitespace-nowrap ${
-            value === v
-              ? "bg-accent font-medium text-on-accent"
-              : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-          }`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -155,6 +130,7 @@ export function SettingsView() {
           <label className="block">
             <span className={LABEL}>Algorithm</span>
             <Segmented
+              grow
               value={scheduler.mode}
               options={[
                 ["fsrs", "FSRS (adaptive)"],
@@ -309,13 +285,10 @@ export function SettingsView() {
           </div>
           <label className="block">
             <span className={LABEL}>Default mode</span>
-            <Segmented<SessionMode>
+            <Segmented
+              grow
               value={session.defaultMode}
-              options={[
-                ["auto", "Per question"],
-                ["flashcard", "Flashcard"],
-                ["typein", "Type-in"],
-              ]}
+              options={SESSION_MODE_OPTIONS}
               onChange={(defaultMode) => update({ session: { defaultMode } })}
             />
           </label>
@@ -325,12 +298,9 @@ export function SettingsView() {
           <label className="block">
             <span className={LABEL}>Answers</span>
             <Segmented
+              grow
               value={quiz.defaultAnswers}
-              options={[
-                ["none", "None"],
-                ["inline", "Under each"],
-                ["key", "Key at end"],
-              ]}
+              options={ANSWER_PLACEMENT_OPTIONS}
               onChange={(defaultAnswers) => update({ quiz: { defaultAnswers } })}
             />
           </label>

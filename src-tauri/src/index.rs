@@ -12,15 +12,13 @@ pub(crate) fn with_db<T>(
     state: &State<'_, AppState>,
     f: impl FnOnce(&Connection) -> Result<T>,
 ) -> Result<T> {
-    let guard = state
-        .0
-        .lock()
-        .map_err(|_| crate::error::Error::msg("state lock poisoned"))?;
-    match guard.as_ref() {
-        Some(v) => f(&v.db),
-        None => Err(crate::error::Error::msg("no vault is open")),
-    }
+    crate::vault::with_vault(state, |v| f(&v.db))
 }
+
+/// The `questions` columns every row-returning query selects, in
+/// `row_to_question` order. Table must be aliased `q`.
+pub(crate) const QUESTION_COLS: &str =
+    "q.id, q.path, q.title, q.body_kind, q.difficulty, q.folder, q.source, q.tags, q.recall, q.created, q.mtime";
 
 /// Everything the index stores about one question. The frontend builds this
 /// from a parsed QuestionDoc + its vault-relative path.
@@ -61,8 +59,7 @@ pub struct QuestionRow {
 #[tauri::command]
 pub fn index_upsert_question(state: State<'_, AppState>, q: QuestionUpsert) -> Result<()> {
     with_db(&state, |db| {
-        let tags_json = serde_json::to_string(&q.tags)
-            .map_err(|e| crate::error::Error::msg(e.to_string()))?;
+        let tags_json = serde_json::to_string(&q.tags)?;
 
         db.execute(
             "INSERT INTO questions (id, path, title, body_kind, difficulty, folder, source, tags, recall, created, mtime)
@@ -113,10 +110,8 @@ pub fn index_remove_question(state: State<'_, AppState>, id: String) -> Result<(
 #[tauri::command]
 pub fn index_list_questions(state: State<'_, AppState>) -> Result<Vec<QuestionRow>> {
     with_db(&state, |db| {
-        let mut stmt = db.prepare(
-            "SELECT id, path, title, body_kind, difficulty, folder, source, tags, recall, created, mtime
-             FROM questions ORDER BY id DESC",
-        )?;
+        let mut stmt =
+            db.prepare(&format!("SELECT {QUESTION_COLS} FROM questions q ORDER BY q.id DESC"))?;
         let rows = stmt
             .query_map([], row_to_question)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -206,10 +201,7 @@ pub(crate) fn push_filters(
 #[tauri::command]
 pub fn index_search(state: State<'_, AppState>, params: SearchParams) -> Result<Vec<QuestionRow>> {
     with_db(&state, |db| {
-        let mut sql = String::from(
-            "SELECT q.id, q.path, q.title, q.body_kind, q.difficulty, q.folder, q.source, q.tags, q.recall, q.created, q.mtime
-             FROM questions q WHERE 1=1",
-        );
+        let mut sql = format!("SELECT {QUESTION_COLS} FROM questions q WHERE 1=1");
         let mut binds: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
         push_filters(&mut sql, &mut binds, &params);
         sql.push_str(" ORDER BY q.id DESC");

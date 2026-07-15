@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { commands } from "../domain/registries";
 import { useUi } from "../state/ui";
+import { Modal } from "./ui/Modal";
 
 export function CommandPalette() {
   const { paletteOpen, closePalette } = useUi();
@@ -36,13 +37,7 @@ export function CommandPalette() {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 pt-24"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) closePalette();
-      }}
-    >
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-edge bg-surface shadow-2xl">
+    <Modal onClose={closePalette} width="max-w-md" top="pt-24" padded={false}>
         <input
           ref={inputRef}
           value={query}
@@ -86,7 +81,6 @@ export function CommandPalette() {
             <li className="px-4 py-3 text-center text-sm text-neutral-400">No matching commands</li>
           )}
         </ul>
-      </div>
-    </div>
+    </Modal>
   );
 }

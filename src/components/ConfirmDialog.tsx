@@ -3,6 +3,8 @@
 
 import { useEffect, useRef } from "react";
 import { useUi } from "../state/ui";
+import { Button } from "./ui/Button";
+import { Modal } from "./ui/Modal";
 
 export function ConfirmDialog() {
   const request = useUi((s) => s.confirmRequest);
@@ -24,36 +26,32 @@ export function ConfirmDialog() {
 
   if (!request) return null;
 
+  // "info" = a plain notice (errorDialog): single accent OK, no Cancel.
+  const info = request.variant === "info";
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 pt-32"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) request.resolve(false);
-      }}
-    >
-      <div className="w-full max-w-sm rounded-xl border border-edge bg-surface p-4 shadow-2xl">
-        <h3 className="text-sm font-semibold">{request.title}</h3>
-        {request.message && (
-          <p className="mt-1.5 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-            {request.message}
-          </p>
-        )}
-        <div className="mt-3 flex justify-end gap-2">
-          <button
-            onClick={() => request.resolve(false)}
-            className="rounded-md border border-edge px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-          >
+    <Modal onClose={() => request.resolve(false)}>
+      <h3 className="text-sm font-semibold">{request.title}</h3>
+      {request.message && (
+        <p className="mt-1.5 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+          {request.message}
+        </p>
+      )}
+      <div className="mt-3 flex justify-end gap-2">
+        {!info && (
+          <Button variant="ghost" className="px-3" onClick={() => request.resolve(false)}>
             Cancel
-          </button>
-          <button
-            ref={confirmRef}
-            onClick={() => request.resolve(true)}
-            className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400"
-          >
-            {request.confirmLabel ?? "Delete"}
-          </button>
-        </div>
+          </Button>
+        )}
+        <Button
+          ref={confirmRef}
+          variant={info ? "primary" : "danger"}
+          className={`focus:outline-none focus:ring-2 ${info ? "focus:ring-accent" : "focus:ring-red-400"}`}
+          onClick={() => request.resolve(true)}
+        >
+          {request.confirmLabel ?? "Delete"}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

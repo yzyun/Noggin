@@ -12,6 +12,10 @@ import { ImageDrop } from "./fields/ImageDrop";
 import { MarkdownField } from "./fields/MarkdownField";
 import { SubjectSelect } from "./fields/SubjectSelect";
 import { TagInput } from "./fields/TagInput";
+import { Button } from "./ui/Button";
+import { Callout } from "./ui/Callout";
+import { Field, INPUT, LABEL } from "./ui/Field";
+import { Segmented } from "./ui/Segmented";
 
 interface Props {
   /** Row + parsed doc when editing; null when creating. */
@@ -19,10 +23,10 @@ interface Props {
   onClose(): void;
 }
 
-const RECALL_MODES: { id: RecallMode; label: string }[] = [
-  { id: "both", label: "Both" },
-  { id: "flashcard", label: "Flashcard" },
-  { id: "typein", label: "Type-in" },
+const RECALL_MODES: [RecallMode, string][] = [
+  ["both", "Both"],
+  ["flashcard", "Flashcard"],
+  ["typein", "Type-in"],
 ];
 
 export function QuestionEditor({ editing, onClose }: Props) {
@@ -149,103 +153,65 @@ export function QuestionEditor({ editing, onClose }: Props) {
           {savedFlash && <span className="text-xs text-green-600 dark:text-green-400">Saved ✓</span>}
           {error && <span className="max-w-64 truncate text-xs text-red-600 dark:text-red-400">{error}</span>}
           {!editing && (
-            <button
-              onClick={clearAll}
-              className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              title="Clear content and all metadata"
-            >
+            <Button variant="ghost" onClick={clearAll} title="Clear content and all metadata">
               Clear all
-            </button>
+            </Button>
           )}
-          <button
-            onClick={() => setShowPreview((p) => !p)}
-            className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-          >
+          <Button variant="ghost" onClick={() => setShowPreview((p) => !p)}>
             {showPreview ? "Hide preview" : "Show preview"}
-          </button>
-          <button
-            onClick={onClose}
-            className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-          >
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-50"
-            title="Cmd/Ctrl+Enter"
-          >
+          </Button>
+          <Button onClick={handleSave} disabled={saving} title="Cmd/Ctrl+Enter">
             {saving ? "Saving…" : editing ? "Save" : "Save & next"}
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="flex min-h-0 flex-1">
         {/* Form */}
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              Title (optional — shown in lists; auto-generated from the question if blank)
-            </span>
+          <Field label="Title (optional — shown in lists; auto-generated from the question if blank)">
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Projectile range at 30°"
-              className="w-full rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-accent"
+              className={`w-full ${INPUT}`}
             />
-          </label>
+          </Field>
 
           {/* Metadata row */}
           <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Subject</span>
+            <Field label="Subject">
               <SubjectSelect value={folder} onChange={setFolder} recent={recentFolders()} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Source</span>
+            </Field>
+            <Field label="Source">
               <input
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 placeholder="e.g. Halliday & Resnick Ch.4 Q17"
-                className="w-full rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-accent"
+                className={`w-full ${INPUT}`}
               />
-            </label>
+            </Field>
           </div>
 
           <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Difficulty</span>
+            <Field label="Difficulty" as="div">
               <DifficultyPicker value={difficulty} onChange={setDifficulty} />
-            </div>
-            <div>
-              <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Recall</span>
-              <div className="flex overflow-hidden rounded-md border border-edge">
-                {RECALL_MODES.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setRecall(m.id)}
-                    className={`px-3 py-1.5 text-xs ${
-                      recall === m.id
-                        ? "bg-accent font-medium text-on-accent"
-                        : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            </Field>
+            <Field label="Recall" as="div">
+              <Segmented<RecallMode> value={recall} options={RECALL_MODES} onChange={setRecall} />
+            </Field>
           </div>
 
-          <div>
-            <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Tags</span>
+          <Field label="Tags" as="div">
             <TagInput value={tags} onChange={setTags} suggestions={allTags()} />
-          </div>
+          </Field>
 
           {/* Content sections */}
           <div>
-            <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            <span className={LABEL}>
               Question — type text and LaTeX together, e.g. Solve $x^2 - 4 = 0$
             </span>
             <MarkdownField
@@ -260,9 +226,7 @@ export function QuestionEditor({ editing, onClose }: Props) {
           </div>
 
           <div>
-            <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              Answer (optional)
-            </span>
+            <span className={LABEL}>Answer (optional)</span>
             <MarkdownField
               value={answer}
               onChange={setAnswer}
@@ -283,13 +247,11 @@ export function QuestionEditor({ editing, onClose }: Props) {
           {showExtras && (
             <>
               <div>
-                <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Hint</span>
+                <span className={LABEL}>Hint</span>
                 <MarkdownField value={hint} onChange={setHint} minHeight="60px" />
               </div>
               <div>
-                <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                  Solution (full worked solution)
-                </span>
+                <span className={LABEL}>Solution (full worked solution)</span>
                 <MarkdownField value={solution} onChange={setSolution} minHeight="80px" />
               </div>
             </>
@@ -302,26 +264,23 @@ export function QuestionEditor({ editing, onClose }: Props) {
             <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">Preview</div>
             {previewDoc.question ? (
               <div className="space-y-4">
-                <div className="rounded-lg border border-edge bg-surface p-3">
+                <Callout tone="neutral">
                   <Markdown text={previewDoc.question} />
-                </div>
+                </Callout>
                 {previewDoc.answer && (
-                  <div className="rounded-lg border border-green-200 bg-green-50/50 p-3 dark:border-green-900 dark:bg-green-950/30">
-                    <div className="mb-1 text-xs font-medium text-green-700 dark:text-green-400">Answer</div>
+                  <Callout tone="answer" label="Answer">
                     <Markdown text={previewDoc.answer} />
-                  </div>
+                  </Callout>
                 )}
                 {previewDoc.hint && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-                    <div className="mb-1 text-xs font-medium text-amber-700 dark:text-amber-400">Hint</div>
+                  <Callout tone="hint" label="Hint">
                     <Markdown text={previewDoc.hint} />
-                  </div>
+                  </Callout>
                 )}
                 {previewDoc.solution && (
-                  <div className="rounded-lg border border-edge bg-surface p-3">
-                    <div className="mb-1 text-xs font-medium text-neutral-500">Solution</div>
+                  <Callout tone="neutral" label="Solution">
                     <Markdown text={previewDoc.solution} />
-                  </div>
+                  </Callout>
                 )}
               </div>
             ) : (

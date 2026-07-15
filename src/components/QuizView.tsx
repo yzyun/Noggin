@@ -4,15 +4,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { parseQuestionFile } from "../domain/format";
+import { ANSWER_PLACEMENT_OPTIONS, type AnswerPlacement } from "../domain/settings";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
-import { ipc, type SearchParams } from "../lib/ipc";
+import { ipc, searchParams, type SearchParams } from "../lib/ipc";
+import { useAsync } from "../lib/useAsync";
 import { useQuestions } from "../state/questions";
 import { useSettings } from "../state/settings";
 import { Markdown } from "./Markdown";
 import { TagInput } from "./fields/TagInput";
+import { Button } from "./ui/Button";
+import { TagToggle } from "./ui/chips";
+import { Field, INPUT } from "./ui/Field";
+import { Segmented } from "./ui/Segmented";
 
-type AnswerPlacement = "none" | "inline" | "key";
 
 export function QuizView() {
   const { allTags, allFolders } = useQuestions();
@@ -20,7 +24,6 @@ export function QuizView() {
   // Pool filters — multiple subjects, OR-combined; none selected = all.
   const [subjects, setSubjects] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
-  const [pool, setPool] = useState<QuestionRow[]>([]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [order, setOrder] = useState<string[]>([]);
 
@@ -31,46 +34,40 @@ export function QuizView() {
   const [answers, setAnswers] = useState<AnswerPlacement>(quizDefaults.defaultAnswers);
   const [showMeta, setShowMeta] = useState(quizDefaults.defaultShowMeta);
 
-  const [docs, setDocs] = useState<Map<string, QuestionDoc>>(new Map());
   const [printError, setPrintError] = useState<string | null>(null);
 
   const params: SearchParams = useMemo(
-    () => ({ text: null, folder: null, folders: subjects, tags, body_kind: null }),
+    () => searchParams({ folders: subjects, tags }),
     [subjects, tags],
   );
 
+  const pool = useAsync(() => ipc.search(params), [params], { reset: false }) ?? [];
+
+  // A fresh pool starts fully picked, in listing order.
   useEffect(() => {
-    let alive = true;
-    void ipc.search(params).then((rows) => {
-      if (!alive) return;
-      setPool(rows);
-      setPicked(new Set(rows.map((r) => r.id)));
-      setOrder(rows.map((r) => r.id));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [params]);
+    setPicked(new Set(pool.map((r) => r.id)));
+    setOrder(pool.map((r) => r.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool]);
 
   // Load docs for picked questions (for preview/print).
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      const next = new Map<string, QuestionDoc>();
-      for (const row of pool) {
-        if (!picked.has(row.id)) continue;
-        try {
-          next.set(row.id, parseQuestionFile(await ipc.readFile(row.path)));
-        } catch {
-          /* skip unreadable */
+  const docs =
+    useAsync(
+      async () => {
+        const next = new Map<string, QuestionDoc>();
+        for (const row of pool) {
+          if (!picked.has(row.id)) continue;
+          try {
+            next.set(row.id, await ipc.readDoc(row.path));
+          } catch {
+            /* skip unreadable */
+          }
         }
-      }
-      if (alive) setDocs(next);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [pool, picked]);
+        return next;
+      },
+      [pool, picked],
+      { reset: false },
+    ) ?? new Map<string, QuestionDoc>();
 
   const shuffle = useCallback(() => {
     setOrder((o) => {
@@ -106,73 +103,46 @@ export function QuizView() {
       <div className="w-80 shrink-0 space-y-4 overflow-y-auto border-r border-edge p-4">
         <h2 className="text-sm font-semibold">Quiz builder</h2>
 
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Title</span>
+        <Field label="Title">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm"
+            className={`w-full ${INPUT}`}
           />
-        </label>
+        </Field>
 
-        <div>
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            Subjects {subjects.length > 0 ? `(${subjects.length})` : "(all)"}
-          </span>
+        <Field label={`Subjects ${subjects.length > 0 ? `(${subjects.length})` : "(all)"}`} as="div">
           <div className="flex flex-wrap gap-1">
-            {allFolders().map((f) => {
-              const on = subjects.includes(f);
-              return (
-                <button
-                  key={f}
-                  onClick={() =>
-                    setSubjects(on ? subjects.filter((s) => s !== f) : [...subjects, f])
-                  }
-                  className={`rounded-full px-2 py-0.5 text-xs transition ${
-                    on
-                      ? "bg-accent text-on-accent"
-                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                  }`}
-                >
-                  📁 {f}
-                </button>
-              );
-            })}
+            {allFolders().map((f) => (
+              <TagToggle
+                key={f}
+                label={`📁 ${f}`}
+                on={subjects.includes(f)}
+                onClick={() =>
+                  setSubjects(
+                    subjects.includes(f) ? subjects.filter((s) => s !== f) : [...subjects, f],
+                  )
+                }
+              />
+            ))}
             {allFolders().length === 0 && (
               <span className="text-xs text-neutral-400">no subjects yet</span>
             )}
           </div>
-        </div>
+        </Field>
 
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Tags</span>
+        <Field label="Tags" as="div">
           <TagInput value={tags} onChange={setTags} suggestions={allTags()} />
-        </label>
+        </Field>
 
-        <div>
-          <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Answers</span>
-          <div className="flex overflow-hidden rounded-md border border-edge">
-            {(
-              [
-                ["none", "None"],
-                ["inline", "Under each"],
-                ["key", "Key at end"],
-              ] as [AnswerPlacement, string][]
-            ).map(([v, label]) => (
-              <button
-                key={v}
-                onClick={() => setAnswers(v)}
-                className={`flex-1 px-2 py-1.5 text-xs ${
-                  answers === v
-                    ? "bg-accent font-medium text-on-accent"
-                    : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Field label="Answers" as="div">
+          <Segmented<AnswerPlacement>
+            grow
+            value={answers}
+            options={ANSWER_PLACEMENT_OPTIONS}
+            onChange={setAnswers}
+          />
+        </Field>
 
         <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
           <input type="checkbox" checked={showMeta} onChange={(e) => setShowMeta(e.target.checked)} />
@@ -229,13 +199,14 @@ export function QuizView() {
           </ul>
         </div>
 
-        <button
+        <Button
+          size="lg"
+          className="w-full"
           onClick={() => void doPrint()}
           disabled={selectedRows.length === 0}
-          className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover disabled:opacity-40"
         >
           Print / Save as PDF ({selectedRows.length})
-        </button>
+        </Button>
         {printError && (
           <p className="text-xs text-red-600 dark:text-red-400">{printError}</p>
         )}

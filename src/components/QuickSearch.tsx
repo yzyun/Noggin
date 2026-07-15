@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { QuestionRow } from "../domain/types";
-import { ipc } from "../lib/ipc";
+import { ipc, searchParams } from "../lib/ipc";
+import { FolderBadge } from "./ui/chips";
+import { Modal } from "./ui/Modal";
 import { useQuestions } from "../state/questions";
 import { useUi } from "../state/ui";
 
@@ -29,7 +31,7 @@ export function QuickSearch() {
     if (!quickSearchOpen) return;
     const t = setTimeout(() => {
       void ipc
-        .search({ text: query.trim() || null, folder: null, tags: [] })
+        .search(searchParams({ text: query.trim() || null }))
         .then((rows) => {
           setResults(rows.slice(0, MAX_RESULTS));
           setCursor(0);
@@ -52,13 +54,7 @@ export function QuickSearch() {
   if (!quickSearchOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 pt-24"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) closeQuickSearch();
-      }}
-    >
-      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-edge bg-surface shadow-2xl">
+    <Modal onClose={closeQuickSearch} width="max-w-lg" top="pt-24" padded={false}>
         <input
           ref={inputRef}
           value={query}
@@ -92,11 +88,7 @@ export function QuickSearch() {
                 }`}
               >
                 <span className="min-w-0 flex-1 truncate">{row.title ?? row.id}</span>
-                {row.folder && (
-                  <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
-                    {row.folder}
-                  </span>
-                )}
+                {row.folder && <FolderBadge folder={row.folder} className="shrink-0" />}
                 {row.difficulty !== null && (
                   <span className="shrink-0 text-xs text-neutral-400">d{row.difficulty}</span>
                 )}
@@ -109,7 +101,6 @@ export function QuickSearch() {
             </li>
           )}
         </ul>
-      </div>
-    </div>
+    </Modal>
   );
 }

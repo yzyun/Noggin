@@ -9,13 +9,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Rating } from "ts-fsrs";
 import { gradeCard, previewIntervals, type Grade } from "../domain/srs";
 import type { SessionMode } from "../domain/settings";
-import type { QuestionDoc } from "../domain/types";
 import { ipc, type DueEntry } from "../lib/ipc";
-import { parseQuestionFile } from "../domain/format";
+import { useAsync } from "../lib/useAsync";
 import { useSettings } from "../state/settings";
 import { Markdown } from "./Markdown";
 import { MarkdownField } from "./fields/MarkdownField";
 import { ReviewSetup } from "./ReviewSetup";
+import { Button } from "./ui/Button";
+import { Callout } from "./ui/Callout";
+import { LABEL } from "./ui/Field";
 
 type Phase = "setup" | "session" | "done";
 
@@ -71,7 +73,6 @@ function Session({
   const scheduler = useSettings((s) => s.settings.scheduler);
   const [queue, setQueue] = useState(initialQueue);
   const [idx, setIdx] = useState(0);
-  const [doc, setDoc] = useState<QuestionDoc | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
@@ -83,21 +84,17 @@ function Session({
     mode === "auto" ? (entry?.question.recall === "typein" ? "typein" : "flashcard") : mode;
 
   // Load the question file for the current card.
+  const doc = useAsync(
+    () => (entry ? ipc.readDoc(entry.question.path) : Promise.resolve(null)),
+    [entry],
+  );
+
+  // Fresh card: back to the unrevealed state.
   useEffect(() => {
-    if (!entry) return;
-    let alive = true;
-    setDoc(null);
     setRevealed(false);
     setShowHint(false);
     setShowSolution(false);
     setAttempt("");
-    void ipc
-      .readFile(entry.question.path)
-      .then((raw) => alive && setDoc(parseQuestionFile(raw)))
-      .catch(() => alive && setDoc(null));
-    return () => {
-      alive = false;
-    };
   }, [entry]);
 
   const previews = useMemo(
@@ -177,12 +174,9 @@ function Session({
           {entry.question.folder && <span>· 📁 {entry.question.folder}</span>}
           <span>· {cardMode === "typein" ? "type-in" : "flashcard"}</span>
         </div>
-        <button
-          onClick={onEnd}
-          className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-        >
+        <Button variant="ghost" onClick={onEnd}>
           End session (Esc)
-        </button>
+        </Button>
       </div>
 
       {/* Card */}
@@ -196,9 +190,9 @@ function Session({
           {doc?.hint && !revealed && (
             <div>
               {showHint ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+                <Callout tone="hint">
                   <Markdown text={doc.hint} />
-                </div>
+                </Callout>
               ) : (
                 <button
                   onClick={() => setShowHint(true)}
@@ -213,9 +207,7 @@ function Session({
           {/* Type-in attempt */}
           {cardMode === "typein" && (
             <div>
-              <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                Your answer {revealed && "(as submitted)"}
-              </span>
+              <span className={LABEL}>Your answer {revealed && "(as submitted)"}</span>
               {revealed ? (
                 <div className="rounded-lg border border-edge bg-surface p-3">
                   {attempt.trim() ? <Markdown text={attempt} /> : <p className="text-sm text-neutral-400">(blank)</p>}
@@ -234,37 +226,29 @@ function Session({
 
           {/* Reveal / answer */}
           {!revealed ? (
-            <button
-              onClick={() => setRevealed(true)}
-              className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover"
-            >
+            <Button size="lg" className="w-full" onClick={() => setRevealed(true)}>
               {cardMode === "typein" ? "Check answer (⌘/Ctrl+Enter)" : "Show answer (Space)"}
-            </button>
+            </Button>
           ) : (
             <>
-              <div className="rounded-lg border border-green-200 bg-green-50/50 p-4 dark:border-green-900 dark:bg-green-950/30">
-                <div className="mb-1 text-xs font-medium text-green-700 dark:text-green-400">Answer</div>
+              <Callout tone="answer" label="Answer" className="p-4">
                 {doc?.answer ? (
                   <Markdown text={doc.answer} />
                 ) : (
                   <p className="text-sm text-neutral-400">(no stored answer — grade your recall)</p>
                 )}
-              </div>
+              </Callout>
 
               {doc?.solution && (
                 <div>
                   {showSolution ? (
-                    <div className="rounded-lg border border-edge bg-surface p-3">
-                      <div className="mb-1 text-xs font-medium text-neutral-500">Solution</div>
+                    <Callout tone="neutral" label="Solution">
                       <Markdown text={doc.solution} />
-                    </div>
+                    </Callout>
                   ) : (
-                    <button
-                      onClick={() => setShowSolution(true)}
-                      className="rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                    >
+                    <Button variant="ghost" onClick={() => setShowSolution(true)}>
                       Show full solution
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -309,12 +293,9 @@ function Done({ summary, onBack }: { summary: Record<number, number>; onBack(): 
           </span>
         ))}
       </div>
-      <button
-        onClick={onBack}
-        className="mt-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-hover"
-      >
+      <Button size="lg" className="mt-2" onClick={onBack}>
         Back to review setup
-      </button>
+      </Button>
     </div>
   );
 }
