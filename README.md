@@ -71,8 +71,8 @@ npm test                    # unit tests
   `$$…$$` for display math (KaTeX).
 - Give the question an optional **title** for the browser list — leave it blank and Noggin
   derives one from the question's first line.
-- **Images**: paste a screenshot straight into the text box, drag & drop onto it, or use the
-  **image dropzone** under each field to browse files. Images are stored in `attachments/`
+- **Images**: paste a screenshot straight into the text box, drag & drop onto it, or use
+  **Add image** under each field to browse files. Images are stored in `attachments/`
   and referenced from the markdown.
 - Each question can carry an **answer**, an optional **hint**, and a full **worked solution**
   (revealed separately during review), plus:
@@ -80,7 +80,8 @@ npm test                    # unit tests
     (e.g. `mechanics/kinematics`). Subjects are real folders in the vault.
   - **Tags**, **difficulty 1–5**, **source**, and a **recall mode** (flashcard / type-in / both).
 - **Batch entry**: `⌘Enter` saves and clears only the content — subject, tags, difficulty and
-  source stick around for the next question. **Clear all** resets everything.
+  source stick around for the next question (**Reset** in the Details card clears them). Leaving with unsaved
+  writing asks before discarding it.
 
 ### 🔍 Browse & search
 

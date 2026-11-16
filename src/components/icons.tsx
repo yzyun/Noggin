@@ -93,6 +93,32 @@ export const SearchIcon = icon(
   </>,
 );
 
+export const ImageIcon = icon(
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="8.5" cy="9.5" r="1.5" />
+    <path d="m21 15.5-4.5-4.5L7 20" />
+  </>,
+);
+
+export const UploadIcon = icon(
+  <>
+    <path d="M12 15V3M7.5 7.5 12 3l4.5 4.5" />
+    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+  </>,
+);
+
+export const PrintIcon = icon(
+  <>
+    <path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+    <rect x="7" y="13.5" width="10" height="7.5" rx="1" />
+  </>,
+);
+
+export const ShuffleIcon = icon(
+  <path d="M3 7h3.5c2 0 3.5 1 4.5 2.5l2 3c1 1.5 2.5 2.5 4.5 2.5H21M3 17h3.5c1.5 0 2.700-.6 3.600-1.5M14 8.5c.9-.9 2.100-1.5 3.5-1.5H21M18 4l3 3-3 3M18 14l3 3-3 3" />,
+);
+
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
 
 export const PencilIcon = icon(

@@ -13,7 +13,9 @@ import { useQuestions } from "../state/questions";
 import { useSettings } from "../state/settings";
 import { Markdown } from "./Markdown";
 import { TagInput } from "./fields/TagInput";
+import { PrintIcon, ShuffleIcon } from "./icons";
 import { Button } from "./ui/Button";
+import { Toggle } from "./ui/Toggle";
 import { TagToggle } from "./ui/chips";
 import { Field, INPUT } from "./ui/Field";
 import { Segmented } from "./ui/Segmented";
@@ -36,6 +38,7 @@ export function QuizView() {
   const [showMeta, setShowMeta] = useState(quizDefaults.defaultShowMeta);
 
   const [printError, setPrintError] = useState<string | null>(null);
+  const [showNested, setShowNested] = useState(false);
 
   const params: SearchParams = useMemo(
     () => searchParams({ folders: subjects, tags }),
@@ -98,124 +101,155 @@ export function QuizView() {
     }
   };
 
+  // Subjects as chosen: picking a parent already covers its children, so
+  // only offer top-level subjects unless the bank is flat anyway.
+  const folders = allFolders();
+  const topLevel = [...new Set(folders.map((f) => f.split("/")[0]))];
+  const subjectOptions = showNested ? folders : topLevel;
+  const toggleSubject = (f: string) =>
+    setSubjects(subjects.includes(f) ? subjects.filter((s) => s !== f) : [...subjects, f]);
+  const allPicked = pool.length > 0 && picked.size === pool.length;
+
   return (
     <div className="flex h-full">
       {/* Controls */}
-      <div className="w-80 shrink-0 space-y-4 overflow-y-auto border-r border-edge p-4">
-        <h2 className="text-sm font-semibold">Quiz builder</h2>
-
-        <Field label="Title">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={`w-full ${INPUT}`}
-          />
-        </Field>
-
-        <Field label={`Subjects ${subjects.length > 0 ? `(${subjects.length})` : "(all)"}`} as="div">
-          <div className="flex flex-wrap gap-1">
-            {allFolders().map((f) => (
-              <TagToggle
-                key={f}
-                label={f}
-                on={subjects.includes(f)}
-                onClick={() =>
-                  setSubjects(
-                    subjects.includes(f) ? subjects.filter((s) => s !== f) : [...subjects, f],
-                  )
-                }
-              />
-            ))}
-            {allFolders().length === 0 && (
-              <span className="text-xs text-neutral-400">no subjects yet</span>
-            )}
-          </div>
-        </Field>
-
-        <Field label="Tags" as="div">
-          <TagInput value={tags} onChange={setTags} suggestions={allTags()} />
-        </Field>
-
-        <Field label="Answers" as="div">
-          <Segmented<AnswerPlacement>
-            grow
-            value={answers}
-            options={ANSWER_PLACEMENT_OPTIONS}
-            onChange={setAnswers}
-          />
-        </Field>
-
-        <label className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
-          <input type="checkbox" checked={showMeta} onChange={(e) => setShowMeta(e.target.checked)} />
-          show source & difficulty
-        </label>
-
-        {/* Question picker */}
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
-              Questions ({picked.size}/{pool.length})
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setPicked(new Set(pool.map((r) => r.id)))}
-                className="rounded border border-edge px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                all
-              </button>
-              <button
-                onClick={() => setPicked(new Set())}
-                className="rounded border border-edge px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                none
-              </button>
-              <button
-                onClick={shuffle}
-                className="rounded border border-edge px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                shuffle
-              </button>
-            </div>
-          </div>
-          <ul className="max-h-72 space-y-0.5 overflow-y-auto">
-            {pool.map((row) => (
-              <li key={row.id}>
-                <label className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800">
-                  <input
-                    type="checkbox"
-                    checked={picked.has(row.id)}
-                    onChange={(e) =>
-                      setPicked((prev) => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.add(row.id);
-                        else next.delete(row.id);
-                        return next;
-                      })
-                    }
-                  />
-                  <span className="truncate"><TitleText text={row.title ?? row.id} /></span>
-                </label>
-              </li>
-            ))}
-          </ul>
+      <div className="flex w-[22rem] shrink-0 flex-col border-r border-edge">
+        <div className="flex h-12 shrink-0 items-center border-b border-edge px-5">
+          <h2 className="text-sm font-semibold">Quiz builder</h2>
         </div>
 
-        <Button
-          size="lg"
-          className="w-full"
-          onClick={() => void doPrint()}
-          disabled={selectedRows.length === 0}
-        >
-          Print / Save as PDF ({selectedRows.length})
-        </Button>
-        {printError && (
-          <p className="text-xs text-red-600 dark:text-red-400">{printError}</p>
-        )}
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
+          {/* 1 — what goes in */}
+          <section className="space-y-3">
+            <Step n={1} title="Choose a pool" />
+            <Field
+              label={subjects.length > 0 ? `Subjects (${subjects.length})` : "Subjects — all"}
+              as="div"
+            >
+              <div className="flex flex-wrap gap-1">
+                {subjectOptions.map((f) => (
+                  <TagToggle key={f} label={f} on={subjects.includes(f)} onClick={() => toggleSubject(f)} />
+                ))}
+                {folders.length === 0 && (
+                  <span className="text-xs text-neutral-400">No subjects yet</span>
+                )}
+                {folders.length > topLevel.length && (
+                  <button
+                    onClick={() => setShowNested((v) => !v)}
+                    className="px-1 text-xs text-neutral-500 underline underline-offset-2 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                  >
+                    {showNested ? "Top-level only" : "Show sub-topics"}
+                  </button>
+                )}
+              </div>
+            </Field>
+            <Field label="Tags" as="div">
+              <TagInput value={tags} onChange={setTags} suggestions={allTags()} />
+            </Field>
+          </section>
+
+          {/* 2 — which questions */}
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Step n={2} title="Pick questions" />
+              <button
+                onClick={shuffle}
+                disabled={picked.size < 2}
+                title="Shuffle the order"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-40 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              >
+                <ShuffleIcon className="h-3.5 w-3.5" /> Shuffle
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-lg border border-edge bg-surface">
+              <label className="flex items-center gap-2 border-b border-edge bg-neutral-50 px-2.5 py-1.5 text-xs text-neutral-500 dark:bg-neutral-900/40 dark:text-neutral-400">
+                <input
+                  type="checkbox"
+                  checked={allPicked}
+                  onChange={() => setPicked(allPicked ? new Set() : new Set(pool.map((r) => r.id)))}
+                />
+                {picked.size} of {pool.length} selected
+              </label>
+              <ul className="max-h-64 overflow-y-auto py-1">
+                {pool.map((row) => (
+                  <li key={row.id}>
+                    <label className="flex items-center gap-2 px-2.5 py-1 text-[13px] hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+                      <input
+                        type="checkbox"
+                        checked={picked.has(row.id)}
+                        onChange={(e) =>
+                          setPicked((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(row.id);
+                            else next.delete(row.id);
+                            return next;
+                          })
+                        }
+                      />
+                      <span className="truncate"><TitleText text={row.title ?? row.id} /></span>
+                    </label>
+                  </li>
+                ))}
+                {pool.length === 0 && (
+                  <li className="px-3 py-4 text-center text-xs text-neutral-400">
+                    No questions match this pool.
+                  </li>
+                )}
+              </ul>
+            </div>
+          </section>
+
+          {/* 3 — how it prints */}
+          <section className="space-y-3">
+            <Step n={3} title="Set up the page" />
+            <Field label="Title">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={`w-full ${INPUT}`}
+              />
+            </Field>
+            <Field label="Answers" as="div">
+              <Segmented<AnswerPlacement>
+                grow
+                value={answers}
+                options={ANSWER_PLACEMENT_OPTIONS}
+                onChange={setAnswers}
+              />
+            </Field>
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span>Show source and difficulty</span>
+              <Toggle label="Show source and difficulty" checked={showMeta} onChange={setShowMeta} />
+            </div>
+          </section>
+        </div>
+
+        {/* Always-visible primary action */}
+        <div className="shrink-0 space-y-2 border-t border-edge bg-surface px-5 py-4">
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={() => void doPrint()}
+            disabled={selectedRows.length === 0}
+          >
+            <span className="flex items-center justify-center gap-2">
+              <PrintIcon /> Print or save as PDF
+            </span>
+          </Button>
+          <p className="text-center text-xs text-neutral-400">
+            {selectedRows.length === 0
+              ? "Select at least one question"
+              : `${selectedRows.length} question${selectedRows.length === 1 ? "" : "s"}${
+                  answers === "key" ? " + answer key" : answers === "inline" ? " with answers" : ""
+                }`}
+          </p>
+          {printError && <p className="text-xs text-red-600 dark:text-red-400">{printError}</p>}
+        </div>
       </div>
 
-      {/* On-screen preview */}
-      <div className="flex-1 overflow-y-auto bg-neutral-100 p-6 dark:bg-neutral-950">
-        <div className="mx-auto max-w-2xl rounded-lg bg-surface p-8 shadow">
+      {/* On-screen preview: a sheet of paper, whatever the app theme */}
+      <div className="flex-1 overflow-y-auto bg-neutral-200/70 px-6 py-8 dark:bg-neutral-950">
+        <div className="mx-auto min-h-[60rem] max-w-[46rem] rounded-sm bg-white px-14 py-12 text-neutral-950 shadow-lg ring-1 ring-black/5 [color-scheme:light]">
           <QuizDocument
             title={title}
             rows={selectedRows}
@@ -243,6 +277,17 @@ export function QuizView() {
   );
 }
 
+function Step({ n, title }: { n: number; title: string }) {
+  return (
+    <h3 className="flex items-center gap-2 text-sm font-semibold">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-[11px] tabular-nums dark:bg-neutral-700">
+        {n}
+      </span>
+      {title}
+    </h3>
+  );
+}
+
 function QuizDocument({
   title,
   rows,
@@ -257,11 +302,17 @@ function QuizDocument({
   showMeta: boolean;
 }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-neutral-400">No questions selected.</p>;
+    return (
+      <p className="py-24 text-center text-sm text-neutral-400">
+        Your worksheet will appear here once you pick some questions.
+      </p>
+    );
   }
   return (
     <div className="quiz-doc space-y-5">
-      <h1 className="text-2xl font-semibold">{title}</h1>
+      <h1 className="border-b border-neutral-300 pb-3 font-display text-2xl font-semibold tracking-tight">
+        {title}
+      </h1>
       <ol className="space-y-5">
         {rows.map((row, i) => {
           const doc = docs.get(row.id)!;
@@ -272,7 +323,7 @@ function QuizDocument({
                 <div className="min-w-0 flex-1">
                   <Markdown text={doc.question} />
                   {showMeta && (row.source || row.difficulty !== null) && (
-                    <p className="mt-1 text-xs text-neutral-400">
+                    <p className="mt-1 text-xs text-neutral-500">
                       {[row.source, row.difficulty !== null ? `difficulty ${row.difficulty}` : null]
                         .filter(Boolean)
                         .join(" · ")}
@@ -292,7 +343,7 @@ function QuizDocument({
 
       {answers === "key" && (
         <div className="answer-key break-before-page">
-          <h2 className="mb-3 text-xl font-semibold">Answer key</h2>
+          <h2 className="mb-3 border-b border-neutral-300 pb-2 font-display text-xl font-semibold">Answer key</h2>
           <ol className="space-y-3">
             {rows.map((row, i) => {
               const doc = docs.get(row.id)!;

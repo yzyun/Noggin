@@ -6,15 +6,17 @@ import { deriveBodyKind, newQuestionMeta } from "../domain/format";
 import { newId } from "../domain/ids";
 import type { QuestionDoc, QuestionRow, RecallMode } from "../domain/types";
 import { useQuestions } from "../state/questions";
+import { confirmDialog, useUi } from "../state/ui";
 import { Markdown } from "./Markdown";
 import { DifficultyPicker } from "./fields/DifficultyPicker";
 import { ImageDrop } from "./fields/ImageDrop";
 import { MarkdownField } from "./fields/MarkdownField";
 import { SubjectSelect } from "./fields/SubjectSelect";
 import { TagInput } from "./fields/TagInput";
+import { CheckIcon, PlusIcon } from "./icons";
 import { Button } from "./ui/Button";
 import { Callout } from "./ui/Callout";
-import { Field, INPUT, LABEL } from "./ui/Field";
+import { Field, INPUT } from "./ui/Field";
 import { Segmented } from "./ui/Segmented";
 
 interface Props {
@@ -24,7 +26,7 @@ interface Props {
 }
 
 const RECALL_MODES: [RecallMode, string][] = [
-  ["both", "Both"],
+  ["both", "Either"],
   ["flashcard", "Flashcard"],
   ["typein", "Type-in"],
 ];
@@ -43,7 +45,8 @@ export function QuestionEditor({ editing, onClose }: Props) {
   const [recall, setRecall] = useState<RecallMode>(editing?.doc.meta.recall ?? "both");
   const [folder, setFolder] = useState(editing?.row.folder ?? "");
   const [showPreview, setShowPreview] = useState(true);
-  const [showExtras, setShowExtras] = useState(Boolean(editing?.doc.hint || editing?.doc.solution));
+  const [showHint, setShowHint] = useState(Boolean(editing?.doc.hint));
+  const [showSolution, setShowSolution] = useState(Boolean(editing?.doc.solution));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +62,8 @@ export function QuestionEditor({ editing, onClose }: Props) {
     setAnswer("");
     setHint("");
     setSolution("");
+    setShowHint(false);
+    setShowSolution(false);
     setResetKey((k) => k + 1);
   }, []);
 
@@ -128,153 +133,238 @@ export function QuestionEditor({ editing, onClose }: Props) {
     }
   }, [question, save, buildDoc, folder, editing, onClose]);
 
+  // Unsaved writing is never thrown away on a stray Esc / Cancel.
+  const initial = editing?.doc;
+  const dirty =
+    question.trim() !== (initial?.question ?? "") ||
+    answer.trim() !== (initial?.answer ?? "") ||
+    hint.trim() !== (initial?.hint ?? "") ||
+    solution.trim() !== (initial?.solution ?? "") ||
+    title.trim() !== (initial?.meta.title ?? "");
+
+  const requestClose = useCallback(async () => {
+    if (
+      dirty &&
+      !(await confirmDialog({
+        title: "Discard this question?",
+        message: "What you've written hasn't been saved.",
+        confirmLabel: "Discard",
+      }))
+    )
+      return;
+    onClose();
+  }, [dirty, onClose]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         void handleSave();
       }
-      if (e.key === "Escape") onClose();
+      // A dialog (e.g. the discard prompt itself) owns Esc while it is open.
+      if (e.key === "Escape" && !useUi.getState().confirmRequest) void requestClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleSave, onClose]);
+  }, [handleSave, requestClose]);
 
   const previewDoc = useMemo(buildDoc, [buildDoc]);
+
+  const append = (setter: React.Dispatch<React.SetStateAction<string>>) => (rel: string) =>
+    setter((v) => `${v.trimEnd()}\n\n![](${rel})\n`);
 
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-edge px-4 py-2.5">
-        <h2 className="text-sm font-semibold">
-          {editing ? "Edit question" : "New question"}
-        </h2>
-        <div className="flex items-center gap-2">
-          {savedFlash && <span className="text-xs text-green-600 dark:text-green-400">Saved ✓</span>}
-          {error && <span className="max-w-64 truncate text-xs text-red-600 dark:text-red-400">{error}</span>}
-          {!editing && (
-            <Button variant="ghost" onClick={clearAll} title="Clear content and all metadata">
-              Clear all
-            </Button>
+      <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-edge px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <h2 className="text-sm font-semibold">{editing ? "Edit question" : "New question"}</h2>
+          {savedFlash && (
+            <span className="flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
+              <CheckIcon className="h-3.5 w-3.5" /> Saved — ready for the next one
+            </span>
           )}
-          <Button variant="ghost" onClick={() => setShowPreview((p) => !p)}>
-            {showPreview ? "Hide preview" : "Show preview"}
+        </div>
+        <div className="flex items-center gap-2">
+          <Segmented<"on" | "off">
+            value={showPreview ? "on" : "off"}
+            options={[
+              ["on", "Preview"],
+              ["off", "Write only"],
+            ]}
+            onChange={(v) => setShowPreview(v === "on")}
+          />
+          <Button variant="ghost" onClick={() => void requestClose()}>
+            {editing ? "Cancel" : "Done"}
           </Button>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving} title="Cmd/Ctrl+Enter">
-            {saving ? "Saving…" : editing ? "Save" : "Save & next"}
+          <Button onClick={handleSave} disabled={saving}>
+            <span className="flex items-center gap-1.5">
+              {saving ? "Saving…" : editing ? "Save" : "Save & next"}
+              <kbd className="font-sans text-[10px] opacity-60">⌘↵</kbd>
+            </span>
           </Button>
         </div>
       </div>
 
       <div className="flex min-h-0 flex-1">
-        {/* Form */}
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
-          <Field label="Title (optional — shown in lists; auto-generated from the question if blank)">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Projectile range at 30°"
-              className={`w-full ${INPUT}`}
-            />
-          </Field>
+        {/* Form: the writing comes first, filing details after */}
+        <div className="min-w-0 flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-2xl space-y-5 px-6 py-6">
+            {error && (
+              <p
+                role="alert"
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+              >
+                {error}
+              </p>
+            )}
 
-          {/* Metadata row */}
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Subject">
-              <SubjectSelect value={folder} onChange={setFolder} recent={recentFolders()} />
-            </Field>
-            <Field label="Source">
-              <input
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                placeholder="e.g. Halliday & Resnick Ch.4 Q17"
-                className={`w-full ${INPUT}`}
+            <div>
+              <div className="mb-1 flex items-baseline justify-between">
+                <span className="text-sm font-semibold">Question</span>
+                <span className="text-xs text-neutral-400">
+                  Markdown, with LaTeX between <code>$…$</code>
+                </span>
+              </div>
+              <MarkdownField
+                key={resetKey}
+                value={question}
+                onChange={setQuestion}
+                placeholder={"A projectile is launched at $30^\\circ$ with speed $v_0$…"}
+                minHeight="140px"
+                autoFocus
               />
-            </Field>
-          </div>
+              <ImageDrop onInsert={append(setQuestion)} />
+            </div>
 
-          <div className="flex flex-wrap items-end gap-4">
-            <Field label="Difficulty" as="div">
-              <DifficultyPicker value={difficulty} onChange={setDifficulty} />
-            </Field>
-            <Field label="Recall" as="div">
-              <Segmented<RecallMode> value={recall} options={RECALL_MODES} onChange={setRecall} />
-            </Field>
-          </div>
-
-          <Field label="Tags" as="div">
-            <TagInput value={tags} onChange={setTags} suggestions={allTags()} />
-          </Field>
-
-          {/* Content sections */}
-          <div>
-            <span className={LABEL}>
-              Question — type text and LaTeX together, e.g. Solve $x^2 - 4 = 0$
-            </span>
-            <MarkdownField
-              key={resetKey}
-              value={question}
-              onChange={setQuestion}
-              placeholder={"A projectile is launched at $30^\\circ$ with speed $v_0$…"}
-              minHeight="120px"
-              autoFocus
-            />
-            <ImageDrop onInsert={(rel) => setQuestion((q) => `${q.trimEnd()}\n\n![](${rel})\n`)} />
-          </div>
-
-          <div>
-            <span className={LABEL}>Answer (optional)</span>
-            <MarkdownField
-              value={answer}
-              onChange={setAnswer}
-              placeholder={"$R = \\dfrac{v_0^2 \\sin 2\\theta}{g}$"}
-              minHeight="80px"
-            />
-            <ImageDrop onInsert={(rel) => setAnswer((a) => `${a.trimEnd()}\n\n![](${rel})\n`)} />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowExtras((s) => !s)}
-            className="text-xs text-neutral-500 underline dark:text-neutral-400"
-          >
-            {showExtras ? "Hide hint & solution" : "Add hint / solution…"}
-          </button>
-
-          {showExtras && (
-            <>
-              <div>
-                <span className={LABEL}>Hint</span>
-                <MarkdownField value={hint} onChange={setHint} minHeight="60px" />
+            <div>
+              <div className="mb-1 flex items-baseline justify-between">
+                <span className="text-sm font-semibold">Answer</span>
+                <span className="text-xs text-neutral-400">optional</span>
               </div>
+              <MarkdownField
+                key={`a${resetKey}`}
+                value={answer}
+                onChange={setAnswer}
+                placeholder={"$R = \\dfrac{v_0^2 \\sin 2\\theta}{g}$"}
+                minHeight="80px"
+              />
+              <ImageDrop onInsert={append(setAnswer)} />
+            </div>
+
+            {showHint && (
               <div>
-                <span className={LABEL}>Solution (full worked solution)</span>
-                <MarkdownField value={solution} onChange={setSolution} minHeight="80px" />
+                <div className="mb-1 flex items-baseline justify-between">
+                  <span className="text-sm font-semibold">Hint</span>
+                  <span className="text-xs text-neutral-400">shown on request, before the answer</span>
+                </div>
+                <MarkdownField key={`h${resetKey}`} value={hint} onChange={setHint} minHeight="60px" />
               </div>
-            </>
-          )}
+            )}
+            {showSolution && (
+              <div>
+                <div className="mb-1 flex items-baseline justify-between">
+                  <span className="text-sm font-semibold">Worked solution</span>
+                  <span className="text-xs text-neutral-400">shown on request, after the answer</span>
+                </div>
+                <MarkdownField
+                  key={`s${resetKey}`}
+                  value={solution}
+                  onChange={setSolution}
+                  minHeight="100px"
+                />
+                <ImageDrop onInsert={append(setSolution)} />
+              </div>
+            )}
+            {(!showHint || !showSolution) && (
+              <div className="flex gap-2">
+                {!showHint && (
+                  <Button variant="ghost" onClick={() => setShowHint(true)}>
+                    <span className="flex items-center gap-1">
+                      <PlusIcon className="h-3 w-3" /> Hint
+                    </span>
+                  </Button>
+                )}
+                {!showSolution && (
+                  <Button variant="ghost" onClick={() => setShowSolution(true)}>
+                    <span className="flex items-center gap-1">
+                      <PlusIcon className="h-3 w-3" /> Worked solution
+                    </span>
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Filing details */}
+            <div className="rounded-xl border border-edge bg-surface">
+              <div className="flex items-baseline justify-between border-b border-edge px-4 py-2.5">
+                <span className="text-sm font-semibold">Details</span>
+                {!editing && (
+                  <span className="flex items-center gap-3 text-xs text-neutral-400">
+                    kept for the next question
+                    <button
+                      type="button"
+                      onClick={clearAll}
+                      className="underline underline-offset-2 hover:text-neutral-800 dark:hover:text-neutral-100"
+                    >
+                      Reset
+                    </button>
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4">
+                <Field label="Subject">
+                  <SubjectSelect value={folder} onChange={setFolder} recent={recentFolders()} />
+                </Field>
+                <Field label="Tags" as="div">
+                  <TagInput value={tags} onChange={setTags} suggestions={allTags()} />
+                </Field>
+                <Field label="Difficulty" as="div">
+                  <DifficultyPicker value={difficulty} onChange={setDifficulty} />
+                </Field>
+                <Field label="Review as" as="div">
+                  <Segmented<RecallMode> value={recall} options={RECALL_MODES} onChange={setRecall} />
+                </Field>
+                <Field label="Source">
+                  <input
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
+                    placeholder="e.g. Halliday & Resnick Ch.4 Q17"
+                    className={`w-full ${INPUT}`}
+                  />
+                </Field>
+                <Field label="Title">
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Optional — defaults to the first line"
+                    className={`w-full ${INPUT}`}
+                  />
+                </Field>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Live preview */}
+        {/* Live preview: the card as it will look in review */}
         {showPreview && (
-          <div className="w-2/5 shrink-0 overflow-y-auto border-l border-edge bg-neutral-50 p-4 dark:bg-neutral-900/50">
-            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">Preview</div>
+          <div className="w-2/5 shrink-0 overflow-y-auto border-l border-edge bg-neutral-100/60 p-6 dark:bg-neutral-900/50">
+            <div className="mb-3 text-[11px] font-medium tracking-wider text-neutral-400 uppercase">
+              Preview
+            </div>
             {previewDoc.question ? (
-              <div className="space-y-4">
-                <Callout tone="neutral">
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-edge bg-surface px-5 py-5 shadow-sm">
                   <Markdown text={previewDoc.question} />
-                </Callout>
-                {previewDoc.answer && (
-                  <Callout tone="answer" label="Answer">
-                    <Markdown text={previewDoc.answer} />
-                  </Callout>
-                )}
+                </div>
                 {previewDoc.hint && (
                   <Callout tone="hint" label="Hint">
                     <Markdown text={previewDoc.hint} />
+                  </Callout>
+                )}
+                {previewDoc.answer && (
+                  <Callout tone="answer" label="Answer" className="rounded-2xl px-5 py-4">
+                    <Markdown text={previewDoc.answer} />
                   </Callout>
                 )}
                 {previewDoc.solution && (
@@ -284,7 +374,9 @@ export function QuestionEditor({ editing, onClose }: Props) {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-neutral-400">Start typing to see the preview.</p>
+              <p className="rounded-2xl border border-dashed border-edge px-5 py-8 text-center text-sm text-neutral-400">
+                Your card appears here as you type — math typeset, images in place.
+              </p>
             )}
           </div>
         )}
