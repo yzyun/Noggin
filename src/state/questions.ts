@@ -158,7 +158,9 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
       // time, not the file's exact mtime).
       for (const f of files) {
         const row = byPath.get(f.rel);
-        if (!row || Math.abs(row.mtime - f.mtime) > 2) {
+        // Older indexes flattened math in titles to "[math]"; re-derive those.
+        const staleTitle = row?.title?.includes("[math]");
+        if (!row || staleTitle || Math.abs(row.mtime - f.mtime) > 2) {
           await indexFile(f.rel, f.mtime);
         }
       }

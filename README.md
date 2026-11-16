@@ -28,6 +28,7 @@ Made for physics & math, where `$E = mc^2$` should just render.
 git clone https://github.com/yzyun/Noggin.git && cd Noggin
 npm install                 # frontend deps
 npm run tauri dev           # run in development (needs Rust — rustup.rs)
+npm run dev                 # UI only, in a browser, against an in-memory demo vault (no Rust)
 npm run tauri build         # produce the installable app/dmg
 npm test                    # unit tests
 ```
@@ -194,7 +195,7 @@ Three ways:
 | `⌘K` | Command palette (every action, searchable) |
 | `⌘P` | Quick search — jump straight to any question |
 | `⌘N` | New question |
-| `⌘1–⌘6` | Questions · Notes · Papers · Review · Quiz · Import |
+| `⌘1–⌘6` | Review · Questions · Notes · Papers · Quiz · Import |
 | `⌘,` | Settings |
 | `⌘Enter` | Save question (batch entry) |
 | `Space` / `1–4` / `Esc` | Review: reveal / grade / end session |

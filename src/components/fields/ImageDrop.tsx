@@ -47,7 +47,7 @@ export function ImageDrop({ onInsert }: Props) {
             : "border-edge text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
         }`}
       >
-        {busy ? "Adding image…" : "🖼 Drop an image here, or click to browse"}
+        {busy ? "Adding image…" : "Drop an image here, or click to browse"}
       </button>
       <input
         ref={inputRef}

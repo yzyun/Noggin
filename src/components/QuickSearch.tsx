@@ -1,5 +1,6 @@
 // ⌘P quick-open: search the whole bank, jump straight to a question.
 
+import { TitleText } from "./TitleText";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { QuestionRow } from "../domain/types";
 import { ipc, searchParams } from "../lib/ipc";
@@ -87,7 +88,7 @@ export function QuickSearch() {
                     : "text-neutral-700 dark:text-neutral-200"
                 }`}
               >
-                <span className="min-w-0 flex-1 truncate">{row.title ?? row.id}</span>
+                <span className="min-w-0 flex-1 truncate"><TitleText text={row.title ?? row.id} /></span>
                 {row.folder && <FolderBadge folder={row.folder} className="shrink-0" />}
                 {row.difficulty !== null && (
                   <span className="shrink-0 text-xs text-neutral-400">d{row.difficulty}</span>

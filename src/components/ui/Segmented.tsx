@@ -1,7 +1,7 @@
 // Segmented control (pill button group) — the single implementation behind
 // every mode/answers/kind/tab picker in the app.
 
-const PAD = { xs: "px-1 py-1", sm: "px-3 py-1.5", md: "px-4 py-1.5" } as const;
+const PAD = { xs: "px-1 py-1", sm: "px-3 py-1", md: "px-4 py-1.5" } as const;
 
 export function Segmented<T extends string>({
   value,
@@ -20,15 +20,20 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={`flex overflow-hidden rounded-md border border-edge ${className}`}>
+    <div
+      role="radiogroup"
+      className={`flex gap-0.5 rounded-lg bg-neutral-200/70 p-0.5 dark:bg-neutral-800 ${className}`}
+    >
       {options.map(([v, label]) => (
         <button
           key={v}
+          role="radio"
+          aria-checked={value === v}
           onClick={() => onChange(v)}
-          className={`${grow ? "flex-1 " : ""}${PAD[size]} text-xs whitespace-nowrap ${
+          className={`${grow ? "flex-1 " : ""}${PAD[size]} rounded-md text-xs whitespace-nowrap transition-colors ${
             value === v
-              ? "bg-accent font-medium text-on-accent"
-              : "bg-surface text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              ? "bg-surface font-medium text-neutral-900 shadow-sm dark:bg-neutral-600 dark:text-white"
+              : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
           }`}
         >
           {label}

@@ -7,20 +7,29 @@ export function effectiveTitle(explicit: string | undefined, questionMarkdown: s
   return explicit?.trim() || deriveTitle(questionMarkdown);
 }
 
-/** First meaningful line of the question, stripped to plain-ish text. */
+/** Cut to maxLen without splitting a `$…$` span in half. */
+function truncate(line: string, maxLen: number): string {
+  if (line.length <= maxLen) return line;
+  let cut = line.slice(0, maxLen - 1);
+  if ((cut.match(/\$/g)?.length ?? 0) % 2 === 1) cut = cut.slice(0, cut.lastIndexOf("$"));
+  return `${cut.trimEnd()}…`;
+}
+
+/** First meaningful line of the question, stripped to plain-ish text. Inline
+ *  math is kept as `$…$` so lists can typeset it (see TitleText). */
 export function deriveTitle(questionMarkdown: string, maxLen = 80): string {
   for (const rawLine of questionMarkdown.split("\n")) {
     const line = rawLine
       .replace(/!\[[^\]]*\]\([^)]*\)/g, "") // images
       .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // links → text
-      .replace(/\$\$[\s\S]*?\$\$/g, "[math]") // display math
-      .replace(/\$[^$]*\$/g, "[math]") // inline math
+      .replace(/\$\$([\s\S]*?)\$\$/g, "$$$1$$") // display math → inline
       .replace(/^#+\s*/, "") // headings
-      .replace(/[*_`>]/g, "") // emphasis/quote markers
+      // emphasis/quote markers — but never inside math, where _ and * mean something
+      .split(/(\$[^$]*\$)/)
+      .map((part, i) => (i % 2 ? part : part.replace(/[*_`>]/g, "")))
+      .join("")
       .trim();
-    if (line) {
-      return line.length > maxLen ? `${line.slice(0, maxLen - 1)}…` : line;
-    }
+    if (line) return truncate(line, maxLen);
   }
   return "Untitled question";
 }

@@ -119,7 +119,7 @@ export function SettingsView() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-xl space-y-6 p-6">
         <div>
-          <h2 className="text-xl font-semibold">Settings</h2>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Settings</h1>
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             Saved to <code className="text-xs">.studydb/config.json</code> in your vault — they
             sync and back up with it.

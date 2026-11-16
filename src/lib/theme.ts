@@ -20,8 +20,9 @@ export interface ThemePreset {
 }
 
 export const THEMES: ThemePreset[] = [
-  { id: "light", label: "Light", dark: false, swatch: "#2563eb", bg: "#ffffff" },
-  { id: "dark", label: "Dark", dark: true, swatch: "#3b82f6", bg: "#171717" },
+  { id: "light", label: "Paper", dark: false, swatch: "#1c1917", bg: "#faf9f7" },
+  { id: "dark", label: "Ink", dark: true, swatch: "#edeae6", bg: "#1c1a18" },
+  { id: "blue", label: "Blue", dark: false, swatch: "#2563eb", bg: "#ffffff" },
   { id: "sepia", label: "Sepia", dark: false, swatch: "#8b5e3c", bg: "#f7f0e3" },
   { id: "nord", label: "Nord", dark: true, swatch: "#88c0d0", bg: "#2e3440" },
   { id: "forest", label: "Forest", dark: false, swatch: "#16a34a", bg: "#f4f9f4" },

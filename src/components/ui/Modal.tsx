@@ -18,12 +18,14 @@ export function Modal({
 }) {
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-start justify-center bg-black/30 ${top}`}
+      className={`fixed inset-0 z-50 flex items-start justify-center bg-black/30 backdrop-blur-[2px] ${top}`}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
         className={`w-full ${width} rounded-xl border border-edge bg-surface shadow-2xl ${
           padded ? "p-4" : "overflow-hidden"
         }`}

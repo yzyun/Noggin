@@ -36,6 +36,8 @@ interface UiStore {
   view: View;
   paletteOpen: boolean;
   quickSearchOpen: boolean;
+  /** A review session is running: the shell hides its sidebar. */
+  focusMode: boolean;
   /** Incremented to ask QuestionsView to open a blank editor. */
   newQuestionSignal: number;
   /** Question id QuestionsView should scroll to and expand. */
@@ -44,6 +46,9 @@ interface UiStore {
   confirmRequest: ConfirmRequest | null;
 
   setView(view: View): void;
+  setFocusMode(on: boolean): void;
+  /** QuestionsView acknowledges it opened the editor for the last signal. */
+  consumeNewQuestion(): void;
   openPalette(): void;
   closePalette(): void;
   openQuickSearch(): void;
@@ -54,15 +59,18 @@ interface UiStore {
 }
 
 export const useUi = create<UiStore>((set, get) => ({
-  view: "questions",
+  view: "review",
   paletteOpen: false,
   quickSearchOpen: false,
+  focusMode: false,
   newQuestionSignal: 0,
   focusQuestionId: null,
   promptRequest: null,
   confirmRequest: null,
 
   setView: (view) => set({ view }),
+  setFocusMode: (focusMode) => set({ focusMode }),
+  consumeNewQuestion: () => set({ newQuestionSignal: 0 }),
   openPalette: () => set({ paletteOpen: true, quickSearchOpen: false }),
   closePalette: () => set({ paletteOpen: false }),
   openQuickSearch: () => set({ quickSearchOpen: true, paletteOpen: false }),

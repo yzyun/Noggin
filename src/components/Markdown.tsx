@@ -69,8 +69,8 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
           a: (props) => (
             <a {...props} target="_blank" rel="noreferrer" className="text-accent underline" />
           ),
-          h1: (props) => <h1 className="text-xl font-semibold" {...props} />,
-          h2: (props) => <h2 className="text-lg font-semibold" {...props} />,
+          h1: (props) => <h1 className="font-display text-2xl font-semibold tracking-tight" {...props} />,
+          h2: (props) => <h2 className="pt-2 font-display text-lg font-semibold" {...props} />,
           h3: (props) => <h3 className="font-semibold" {...props} />,
           ul: (props) => <ul className="list-disc pl-5" {...props} />,
           ol: (props) => <ol className="list-decimal pl-5" {...props} />,

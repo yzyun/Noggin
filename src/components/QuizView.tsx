@@ -2,6 +2,7 @@
 // answer placement, then print — the macOS print dialog's "Save as PDF"
 // produces a worksheet with fully typeset math and images.
 
+import { TitleText } from "./TitleText";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ANSWER_PLACEMENT_OPTIONS, type AnswerPlacement } from "../domain/settings";
@@ -116,7 +117,7 @@ export function QuizView() {
             {allFolders().map((f) => (
               <TagToggle
                 key={f}
-                label={`📁 ${f}`}
+                label={f}
                 on={subjects.includes(f)}
                 onClick={() =>
                   setSubjects(
@@ -192,7 +193,7 @@ export function QuizView() {
                       })
                     }
                   />
-                  <span className="truncate">{row.title ?? row.id}</span>
+                  <span className="truncate"><TitleText text={row.title ?? row.id} /></span>
                 </label>
               </li>
             ))}

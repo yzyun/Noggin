@@ -116,7 +116,7 @@ export function ImportView() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl space-y-5 p-6">
         <div>
-          <h2 className="text-xl font-semibold">Import questions</h2>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Import questions</h1>
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             CSV, Excel or JSON → standard markdown files in your vault. Tip: you can also skip
             this entirely — any markdown file following the format below dropped into{" "}
@@ -135,7 +135,7 @@ export function ImportView() {
           }}
           className="flex w-full items-center justify-center rounded-lg border-2 border-dashed border-edge px-4 py-6 text-sm text-neutral-500 transition hover:border-accent hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
         >
-          {fileName ? `📄 ${fileName} — click to replace` : "Drop a .csv / .xlsx / .json file here, or click to browse"}
+          {fileName ? `${fileName} — click to replace` : "Drop a .csv / .xlsx / .json file here, or click to browse"}
         </button>
         <input
           ref={fileInput}
@@ -155,8 +155,8 @@ export function ImportView() {
             onClick={() => setShowSpec((s) => !s)}
             className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
-            <span>📄 Question file format — give this to any AI or scraper</span>
-            <span className="text-neutral-400">{showSpec ? "▴ hide" : "▾ show"}</span>
+            <span>Question file format — give this to any AI or scraper</span>
+            <span className="text-neutral-400">{showSpec ? "Hide" : "Show"}</span>
           </button>
           {showSpec && (
             <div className="border-t border-edge px-4 py-3 text-sm">
