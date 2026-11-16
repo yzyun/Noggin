@@ -3,6 +3,7 @@ import {
   addDays,
   dayKey,
   isDue,
+  statusOf,
   parseReviewLog,
   recallRate,
   stageOf,
@@ -79,5 +80,16 @@ describe("stageOf / isDue", () => {
     expect(isDue({ state: "new", due: null }, today)).toBe(false);
     expect(isDue({ state: "review", due: addDays(today, -1).toISOString() }, today)).toBe(true);
     expect(isDue({ state: "review", due: addDays(today, 1).toISOString() }, today)).toBe(false);
+  });
+});
+
+describe("statusOf", () => {
+  it("is new without a card or before the first review", () => {
+    expect(statusOf(undefined, today)).toBe("new");
+    expect(statusOf({ state: "new", due: null }, today)).toBe("new");
+  });
+  it("splits started cards into due and later", () => {
+    expect(statusOf({ state: "learning", due: addDays(today, -1).toISOString() }, today)).toBe("due");
+    expect(statusOf({ state: "review", due: addDays(today, 3).toISOString() }, today)).toBe("later");
   });
 });

@@ -104,3 +104,15 @@ export function stageOf(card: Pick<CardRow, "state" | "scheduled_days">): Stage 
 export function isDue(card: Pick<CardRow, "state" | "due">, now: Date): boolean {
   return card.state !== "new" && card.due !== null && new Date(card.due) <= now;
 }
+
+/** Review status as shown (and filtered) in the question list. */
+export type ReviewStatus = "new" | "due" | "later";
+
+/** A question with no card yet (not indexed) counts as new. */
+export function statusOf(
+  card: Pick<CardRow, "state" | "due"> | undefined,
+  now: Date,
+): ReviewStatus {
+  if (!card || card.state === "new") return "new";
+  return isDue(card, now) ? "due" : "later";
+}

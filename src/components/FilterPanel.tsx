@@ -8,7 +8,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { BodyKind, QuestionRow } from "../domain/types";
+import { statusOf, type ReviewStatus } from "../domain/progress";
 import { useQuestions } from "../state/questions";
+import { useReview } from "../state/review";
 import { confirmDialog, errorDialog, textPrompt } from "../state/ui";
 import { INPUT } from "./ui/Field";
 import { FolderTree } from "./ui/FolderTree";
@@ -17,6 +19,13 @@ import { buildFolderTree } from "../lib/folderTree";
 
 export const DND_QUESTIONS = "application/x-noggin-questions";
 const DND_FOLDER = "application/x-noggin-folder";
+
+const STATUS_OPTIONS: [ReviewStatus | "any", string][] = [
+  ["any", "any"],
+  ["due", "due"],
+  ["new", "new"],
+  ["later", "later"],
+];
 
 function countIn(rows: QuestionRow[], folder: string): number {
   return rows.filter((r) => r.folder === folder || r.folder.startsWith(`${folder}/`)).length;
@@ -68,6 +77,15 @@ export function FilterPanel() {
     const kept = filters.tags.filter((t) => tags.includes(t));
     if (kept.length !== filters.tags.length) setFilters({ tags: kept });
   }, [tags, filters.tags, setFilters]);
+
+  // How many questions in the bank are in each review status.
+  const cards = useReview((s) => s.cards);
+  const statusCounts = useMemo(() => {
+    const now = new Date();
+    const counts: Record<ReviewStatus, number> = { due: 0, new: 0, later: 0 };
+    for (const r of allRows) counts[statusOf(cards.get(r.id), now)]++;
+    return counts;
+  }, [allRows, cards]);
 
   // --- folder actions ------------------------------------------------------
 
@@ -122,7 +140,8 @@ export function FilterPanel() {
     filters.tags.length > 0 ||
     filters.minDifficulty !== null ||
     filters.maxDifficulty !== null ||
-    filters.kind !== null;
+    filters.kind !== null ||
+    filters.status !== null;
 
   return (
     <div className="flex w-60 shrink-0 flex-col border-r border-edge">
@@ -179,7 +198,22 @@ export function FilterPanel() {
       </div>
 
       {/* Pinned filter section: tags / difficulty / kind */}
-      <div className="max-h-[45%] space-y-3 overflow-y-auto border-t border-edge p-3">
+      <div className="max-h-[55%] space-y-3 overflow-y-auto border-t border-edge p-3">
+        <div>
+          <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-neutral-400">
+            Review status
+          </span>
+          <Segmented<ReviewStatus | "any">
+            grow
+            size="xs"
+            value={filters.status ?? "any"}
+            options={STATUS_OPTIONS.map(
+              ([v, label]) => [v, v === "any" ? label : `${label} ${statusCounts[v]}`] as const,
+            )}
+            onChange={(v) => setFilters({ status: v === "any" ? null : v })}
+          />
+        </div>
+
         {tags.length > 0 && (
           <div>
             <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-neutral-400">

@@ -1,8 +1,8 @@
 // Questions section: filter panel + result list + bulk actions + editor.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
-import { isDue, stageOf } from "../domain/progress";
+import { isDue, stageOf, statusOf } from "../domain/progress";
 import { fmtInterval } from "../domain/srs";
 import { useQuestions } from "../state/questions";
 import { useReview } from "../state/review";
@@ -16,7 +16,16 @@ import { Callout } from "./ui/Callout";
 import { QuestionEditor } from "./QuestionEditor";
 
 export function QuestionsView() {
-  const { rows, loaded, scanning, error, load, openDoc, removeMany } = useQuestions();
+  const { rows: matched, loaded, scanning, error, load, openDoc, removeMany } = useQuestions();
+  const statusFilter = useQuestions((s) => s.filters.status);
+  const cards = useReview((s) => s.cards);
+  // The index query handles every filter but review status, which is applied
+  // here against the live schedule.
+  const rows = useMemo(() => {
+    if (!statusFilter) return matched;
+    const now = new Date();
+    return matched.filter((r) => statusOf(cards.get(r.id), now) === statusFilter);
+  }, [matched, statusFilter, cards]);
   const newQuestionSignal = useUi((s) => s.newQuestionSignal);
   const focusQuestionId = useUi((s) => s.focusQuestionId);
   const [mode, setMode] = useState<"list" | "edit">("list");

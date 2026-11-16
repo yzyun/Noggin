@@ -97,7 +97,7 @@ npm test                    # unit tests
 - **⌘/Ctrl+click a question card** to add it to the selection without expanding it — then
   drag the whole selection into a folder, or bulk-delete it.
 - Searching also matches a question's **tags and folder path**, not just its text.
-- Combinable filters: **tags** (AND), **difficulty range**, **content kind** (text/math/image),
+- Combinable filters: **review status** (due / new / later, with live counts), **tags** (AND), **difficulty range**, **content kind** (text/math/image),
   and a **search box** that matches substrings anywhere in the question, answer, source or
   tags ("synth" finds "photosynthesis").
 - Expand a question card to read it, **reveal the answer**, edit, or delete. Select many with
@@ -162,7 +162,8 @@ A read-only view of how study is going, built from the review log and your card 
   **per subject**, with what's due now.
 
 In the question list, every row also shows its review status: **New**, **Due**, or when it
-next comes up ("in 3d").
+next comes up ("in 3d") — and the filter panel can narrow the list to due, new or
+scheduled-for-later questions.
 
 ### ⚙️ Settings
 

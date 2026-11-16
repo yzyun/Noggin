@@ -6,6 +6,7 @@ import { create } from "zustand";
 import { ipc, searchParams } from "../lib/ipc";
 import { deriveBodyKind, serializeQuestionFile } from "../domain/format";
 import { effectiveTitle, slugify } from "../domain/title";
+import type { ReviewStatus } from "../domain/progress";
 import type { BodyKind, QuestionDoc, QuestionRow } from "../domain/types";
 import { useVault } from "./vault";
 
@@ -17,6 +18,9 @@ export interface Filters {
   minDifficulty: number | null;
   maxDifficulty: number | null;
   kind: BodyKind | null;
+  /** Review status. Applied in the list (not the index query): "due"
+   *  depends on the clock, and the schedule lives in the review store. */
+  status: ReviewStatus | null;
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -26,6 +30,7 @@ export const EMPTY_FILTERS: Filters = {
   minDifficulty: null,
   maxDifficulty: null,
   kind: null,
+  status: null,
 };
 
 interface QuestionsStore {
@@ -122,7 +127,8 @@ export const useQuestions = create<QuestionsStore>((set, get) => ({
 
   setFilters(patch) {
     set({ filters: { ...get().filters, ...patch } });
-    void get().load();
+    // Status is applied client-side — no need to re-query for it alone.
+    if (Object.keys(patch).some((k) => k !== "status")) void get().load();
   },
 
   clearFilters() {
