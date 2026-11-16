@@ -10,28 +10,56 @@ Made for physics & math, where `$E = mc^2$` should just render.
 
 ---
 
-## Install (macOS)
+## Download & install
 
-1. Download **`Noggin_0.7.1_aarch64.dmg`** (or the latest version) from the
-   [Releases page](https://github.com/yzyun/Noggin/releases) (Apple Silicon).
-2. Open the `.dmg` and drag **Noggin** into **Applications**.
-3. First launch: right-click **Noggin.app → Open → Open**. The app is ad-hoc signed but not
+Get the installer for your computer from the
+[**Releases page**](https://github.com/yzyun/Noggin/releases):
+
+| Your computer | File to download |
+|---|---|
+| Mac with Apple Silicon (M1 or later) | `Noggin_0.8.0_aarch64.dmg` |
+| Mac with an Intel chip | `Noggin_0.8.0_x64.dmg` |
+| Windows | `Noggin_0.8.0_x64-setup.exe` |
+| Linux | `.AppImage` (any distro) or `.deb` (Debian/Ubuntu) |
+
+macOS is the platform Noggin is developed and used on. The Windows and Linux installers are
+built automatically from the same code but have had far less hands-on testing.
+
+**macOS**
+
+1. Open the `.dmg` and drag **Noggin** into **Applications**.
+2. First launch: right-click **Noggin.app → Open → Open**. The app is ad-hoc signed but not
    notarized with Apple, so macOS warns once. If macOS says the app is **"damaged and can't be
-   opened"**, that's just the download-quarantine flag — clear it with
-   `xattr -cr /Applications/Noggin.app` in Terminal, then open it again.
-4. Pick (or create) an empty folder as your **vault** — e.g. `~/Documents/Study Vault`.
-   That's it. Noggin remembers your vault and reopens it next launch.
+   opened"**, that's just the download-quarantine flag — clear it in Terminal and open it again:
 
-### Build from source (any platform Tauri supports)
+   ```bash
+   xattr -cr /Applications/Noggin.app
+   ```
 
-```bash
-git clone https://github.com/yzyun/Noggin.git && cd Noggin
-npm install                 # frontend deps
-npm run tauri dev           # run in development (needs Rust — rustup.rs)
-npm run dev                 # UI only, in a browser, against an in-memory demo vault (no Rust)
-npm run tauri build         # produce the installable app/dmg
-npm test                    # unit tests
-```
+**Windows** — run the `-setup.exe`. The installer isn't code-signed, so SmartScreen may show
+"Windows protected your PC": choose **More info → Run anyway**.
+
+**Linux** — make the AppImage executable (`chmod +x Noggin_*.AppImage`) and run it, or
+install the `.deb` with `sudo apt install ./Noggin_*.deb`.
+
+On Windows and Linux, read every `⌘` in this guide as `Ctrl`.
+
+---
+
+## Quick start
+
+1. **Pick a vault.** On first launch, choose (or create) an empty folder — for example
+   `Documents/Study Vault`. Everything Noggin stores lives in that folder, and it reopens
+   automatically next time.
+2. **Add a question.** Press `⌘N`, type the question and its answer — LaTeX goes between
+   dollar signs, e.g. `Solve $x^2 - 4 = 0$` — choose a subject, and press `⌘Enter`. The form
+   clears for the next one.
+3. **Or bring in many at once.** Open **Import** and drop in a spreadsheet — or click
+   *Try it with sample questions* to see how it works.
+4. **Review.** Open **Review** and press `Enter`. Think of the answer, press `Space` to
+   reveal it, then grade yourself with `1`–`4`. Noggin decides when each card comes back.
+5. **Come back tomorrow.** The Review screen tells you what's due each day; **Progress**
+   shows your streak and how well things are sticking.
 
 ---
 
@@ -64,164 +92,199 @@ npm test                    # unit tests
 
 ## Using Noggin
 
-### ✍️ Questions
-
-- **+ New question** (or `⌘N`): write the question and answer in Markdown. **Text and LaTeX
-  mix freely** — `Solve $x^2-4=0$` renders live in the preview pane. `$…$` for inline math,
-  `$$…$$` for display math (KaTeX).
-- Give the question an optional **title** for the browser list — leave it blank and Noggin
-  derives one from the question's first line.
-- **Images**: paste a screenshot straight into the text box, drag & drop onto it, or use
-  **Add image** under each field to browse files. Images are stored in `attachments/`
-  and referenced from the markdown.
-- Each question can carry an **answer**, an optional **hint**, and a full **worked solution**
-  (revealed separately during review), plus:
-  - **Subject** — a dropdown of your recent subjects; type to create new ones, nest with `/`
-    (e.g. `mechanics/kinematics`). Subjects are real folders in the vault.
-  - **Tags**, **difficulty 1–5**, **source**, and a **recall mode** (flashcard / type-in / both).
-- **Batch entry**: `⌘Enter` saves and clears only the content — subject, tags, difficulty and
-  source stick around for the next question (**Reset** in the Details card clears them). Leaving with unsaved
-  writing asks before discarding it.
-
-### 🔍 Browse & search
-
-- **Folder tree** with per-subject counts — selecting a subject includes everything nested
-  under it, and **⌘/Ctrl+click selects several subjects at once** (the list shows their
-  combined questions). **Manage folders right in the tree**: the `+` button creates folders
-  (nest with `/`), and hovering a folder reveals `+` (new subfolder), `✎` (rename — edit the
-  full path to move it anywhere), and `×` (delete — its contents move up to the parent,
-  nothing is lost). Folders are real directories in the vault, so empty ones show up too.
-- **Drag & drop to organise**: drag a question card onto a folder to move it there (drag any
-  selected card to move the whole selection); drag a folder onto another folder to nest it,
-  or onto "All questions" to move it to the top level.
-- **⌘/Ctrl+click a question card** to add it to the selection without expanding it — then
-  drag the whole selection into a folder, or bulk-delete it.
-- Searching also matches a question's **tags and folder path**, not just its text.
-- Combinable filters: **review status** (due / new / later, with live counts), **tags** (AND), **difficulty range**, **content kind** (text/math/image),
-  and a **search box** that matches substrings anywhere in the question, answer, source or
-  tags ("synth" finds "photosynthesis").
-- Expand a question card to read it, **reveal the answer**, edit, or delete. Select many with
-  checkboxes for **bulk delete**.
-
-### 📝 Notes
-
-Markdown, LaTeX, and PDF files, side by side — for summaries, derivations, formula sheets, and
-reference papers.
-
-- **Markdown** notes get the same math/image rendering as questions, with `⌘S` to save and a
-  toggle between edit and preview.
-- **LaTeX** (`.tex`) notes open in the same text editor — create one by giving it a `.tex` name
-  when prompted, or drop an existing file in with **Import**.
-- **PDF** notes are view-only, rendered in an embedded viewer — bring one in with **Import**.
-- **Folders** work exactly like the question bank's: the `+` button creates folders (nest with
-  `/`), hovering a folder reveals `+` (subfolder), `✎` (rename/move), and `×` (delete — contents
-  move up to the parent). **Drag & drop** a note onto a folder to file it there, or a folder
-  onto another to nest it. **⌘/Ctrl+click** folders to view several at once.
-- **Deleting** a note, question, or folder always asks for confirmation first — nothing goes
-  away on a stray click.
-
-### 📑 Papers
-
-A home for **exam papers and worksheets**: hit **Import** to bring in any PDF, read it in the
-embedded viewer, and organise past papers into folders by subject or year — same folder tree,
-drag & drop, and multi-select as everywhere else.
+The sidebar is split into **Study** (Review, Progress, Quiz) and **Library** (Questions,
+Notes, Papers), with **Import**, **Settings** and the command palette at the bottom. The
+number beside Review is how many cards are due right now. To open a different vault, click
+the small arrows next to the vault's name at the top.
 
 ### 🧠 Review (spaced repetition)
 
-Noggin schedules reviews with **FSRS**, the modern successor to Anki's algorithm, targeting
-~90% retention with the fewest reviews — and everything about the schedule is tunable in
-**Settings** (see below), including a fully manual fixed-interval mode.
+Noggin opens here. It schedules reviews with **FSRS**, the modern successor to Anki's
+algorithm, aiming for about 90% recall with as few reviews as possible.
 
-The Review screen has two tabs:
+- The headline says how many cards are ready; **Start review** (or `Enter`) begins a session
+  with your default settings.
+- Below it: how many you've reviewed today, and a **7-day forecast** of cards coming due.
+- **By subject** lists each subject with its due and new counts. Expand one to see the
+  individual questions, or press **Review** on a row to study just that subject.
+- **Custom session** (the toggle on the right) lets you scope a session by subject and tags,
+  choose the answer mode, and cap its size.
 
-- **Due now** — your subjects listed with **due + new counts**, each expandable to the
-  individual questions inside (with "due 2h ago"-style timestamps). Hit **Review** on a
-  single subject or **Review all** to start immediately with your default session settings.
-  The header shows what's due, what's new, today's count, and a 7-day forecast.
-- **Custom session** — scope a session by subject/tags, pick the mode, and cap its size.
+During a session the sidebar hides and the card takes the whole window:
 
-During a session:
-
-- **Modes**: **Flashcard** (think → reveal → grade), **Type-in** (write your answer first —
-  text or LaTeX — then compare against the stored answer), or **Per question** (each card
-  uses its own recall setting).
-- Grade with **Again / Hard / Good / Easy** (keys `1–4`) — each button shows exactly when
-  you'd next see the card (`10m`, `3d`, `2.0mo`…). Cards graded **Again** return later in the
-  same session. `Space` reveals; `Esc` ends.
-- **Hints and solutions** are revealed only on request, so they never spoil recall.
-- Every review is appended to `review-log.jsonl` — your complete study history, forever.
+- **Answer modes**: **Flashcard** (think → reveal → grade), **Type-in** (write your answer
+  first — text or LaTeX — then compare it with the stored one), or **Per question** (each
+  card uses its own setting).
+- `Space` reveals the answer. Grade with **Again / Hard / Good / Easy** (keys `1`–`4`); each
+  button shows when you'd next see the card (`10m`, `3d`, `2.0mo`…). Cards graded **Again**
+  come back later in the same session.
+- **Need a hint?** and **Show full solution** appear only when the question has them, and
+  only reveal on request.
+- `Esc` ends the session early; you get a summary of whatever you graded.
 
 ### 📈 Progress
 
-A read-only view of how study is going, built from the review log and your card schedule:
+A read-only view of how study is going (`⌘7`):
 
 - **Headline numbers** — current streak, reviews and recall rate over the last 30 days, and
-  how many cards are mature (interval of 3 weeks or more).
-- **Reviews per day** for the last 30 days and an **activity calendar** for the last 26 weeks.
+  how many cards are mature (review interval of 3 weeks or more).
+- **Reviews per day** for the last 30 days, and an **activity calendar** for the last 26 weeks.
 - **Where your cards are** — not started, learning, young, mature — and the same picture
   **per subject**, with what's due now.
 
-In the question list, every row also shows its review status: **New**, **Due**, or when it
-next comes up ("in 3d") — and the filter panel can narrow the list to due, new or
-scheduled-for-later questions.
-
-### ⚙️ Settings
-
-A dedicated **Settings** section (`⌘,`) — stored in `.studydb/config.json`, so your
-preferences sync and back up with the vault:
-
-- **Scheduler** — choose the algorithm:
-  - **FSRS (adaptive)**: edit the **learning steps** for new cards (e.g. change `1m 10m` to
-    `10m 1d` if the defaults feel too quick), the **relearning steps** for lapsed cards, the
-    **desired retention** (lower = fewer, more spaced reviews), the **maximum interval**, and
-    interval **fuzz**.
-  - **Manual intervals**: set a fixed time for each of **Again / Hard / Good / Easy**, plus a
-    **growth factor** that multiplies a card's interval on each Good/Easy once it has
-    graduated. Predictable, Anki-classic-style scheduling.
-- **Review sessions** — default max cards, default mode, and a **new-cards-per-day limit**
-  so a big import doesn't flood your queue.
-- **Quiz defaults** — default answer placement and metadata visibility for the quiz builder.
-- **Appearance** — the theme picker.
+Hover any bar or square for its exact value.
 
 ### 📄 Quiz → PDF
 
-Turn any slice of the bank into a printable worksheet: filter by subject/tags, tick the
-questions (shuffle if you like), choose where answers go (**none**, **under each question**,
-or an **answer key on its own page**), then **Print / Save as PDF** — math and diagrams come
-out exactly as typeset.
+Turn any slice of the bank into a printable worksheet, in three steps:
 
-### 📥 Getting questions in bulk
+1. **Choose a pool** — pick subjects (*Show sub-topics* reveals nested ones) and tags.
+2. **Pick questions** — untick any you don't want; **Shuffle** randomises the order.
+3. **Set up the page** — title, where answers go (**None**, **Under each**, or **Key at end**
+   on its own page), and whether to print each question's source and difficulty.
+
+**Print or save as PDF** opens the system print dialog. The preview on the right is exactly
+what prints — math and diagrams fully typeset.
+
+### ✍️ Writing questions
+
+- **New question** in the sidebar, or `⌘N`. Write the **question** and **answer** in
+  Markdown; text and LaTeX mix freely — `$…$` for inline math, `$$…$$` for display math. The
+  **Preview** pane on the right shows the card as it will look in review.
+- **Hint** and **Worked solution** are optional — add them with the `+` buttons.
+- **Images**: paste a screenshot straight into a text box, drag one onto it, or use
+  **Add image**. Images are saved to the vault's `attachments/` folder.
+- The **Details** card files the question:
+  - **Subject** — pick a recent one or type a new one; nest with `/`
+    (e.g. `mechanics/kinematics`). Subjects are real folders in the vault.
+  - **Tags**, **Difficulty** 1–5, and **Source**.
+  - **Review as** — flashcard, type-in, or either.
+  - **Title** — optional; left blank, the list shows the question's first line.
+- **Batch entry**: `⌘Enter` (**Save & next**) saves and clears only the writing; the Details
+  stay for the next question. **Reset** clears those too.
+- Leaving with unsaved writing asks before discarding it.
+
+### 🔍 Browsing questions
+
+- Each row shows the question (math typeset), its tags, its **review status** — **New**,
+  **Due**, or when it's next up ("in 3d") — and its difficulty as five dots.
+- **Click a row** to read it and reveal the answer. Hover for the **edit** and **delete**
+  buttons.
+- **Filters** (left panel), all combinable:
+  - a **search box** matching text anywhere in the question, answer, source, tags or folder
+    ("synth" finds "photosynthesis");
+  - the **folder tree** — a subject includes everything nested under it;
+    `⌘`-click selects several at once;
+  - **review status** (due / new / later, with counts), **tags**, **difficulty range**, and
+    **kind** (text / math / image).
+- **Organise**: drag a question onto a folder to move it. Tick several (or `⌘`-click rows)
+  to move or delete them together.
+- **Folders**: the `+` beside *Folders* creates one (nest with `/`). Hover a folder for new
+  subfolder, rename/move (edit the full path to move it), and delete — deleting a folder
+  moves its contents up to the parent, so nothing is lost. Drag a folder onto another to
+  nest it.
+- `⌘P` jumps straight to any question from anywhere in the app.
+
+### 📝 Notes
+
+Markdown, LaTeX and PDF files side by side — for summaries, derivations and formula sheets.
+
+- **New** creates a Markdown note (give it a `.tex` name for LaTeX); **Import** brings in
+  existing files, including PDFs.
+- Markdown notes open in **Read** mode with math and images rendered; switch to **Edit** to
+  change them, and `⌘S` to save. PDFs are view-only.
+- Folders work exactly as in the question bank, including drag & drop.
+
+### 📑 Papers
+
+A home for **exam papers and worksheets**: **Import** any PDF, read it in the built-in
+viewer, and organise past papers into folders by subject or year.
+
+### 📥 Importing questions in bulk
 
 Three ways:
 
-1. **Import tab** — drop a **CSV / Excel / JSON** file. Columns are auto-mapped from headers
-   (remappable), defaults fill the gaps, and a validated preview flags empty questions, bad
-   difficulties, and duplicates before anything is written. Try
-   [`sample-import.csv`](./sample-import.csv).
-2. **Drop markdown files** — anything following [`QUESTION_FORMAT.md`](./QUESTION_FORMAT.md)
-   placed into `questions/` is indexed automatically within seconds. No import step.
-3. **Ask an AI** — paste `QUESTION_FORMAT.md` into any AI ("generate 20 kinematics questions
-   in this format"), save the output into your vault, done.
+1. **A spreadsheet** — open **Import** and drop a **CSV, Excel or JSON** file (one question
+   per row). Then:
+   1. **Match your columns** — Noggin guesses from the headers and shows the first row so you
+      can check;
+   2. **Fill the gaps** — defaults for rows with no subject, tags, difficulty or source;
+   3. **Review** — every row is marked Ready, Duplicate or Can't import before anything is
+      saved.
 
-### ⌨️ Command palette & shortcuts
+   [`sample-import.csv`](./sample-import.csv) shows the expected shape, and *Try it with
+   sample questions* loads it for you.
+2. **Markdown files** — any file following [`QUESTION_FORMAT.md`](./QUESTION_FORMAT.md)
+   placed in the vault's `questions/` folder is picked up within seconds. No import step.
+3. **Ask an AI** — **Copy format** on the Import screen copies the format description; paste
+   it into any AI ("generate 20 kinematics questions in this format") and save the output
+   into your vault.
+
+### ⚙️ Settings
+
+Open with `⌘,`. Changes save automatically to `.studydb/config.json`, so they travel with
+the vault.
+
+- **Appearance** — seven themes: Paper (default), Ink (dark), Blue, Sepia, Nord, Forest and
+  Violet.
+- **Review sessions** — cards per session, **new cards per day** (so a big import doesn't
+  flood you), and the default answer mode.
+- **Scheduler** — the defaults suit most people. **Adaptive (FSRS)** lets you tune desired
+  retention, learning and relearning steps, the longest interval, and whether due dates are
+  spread out. **Fixed intervals** sets a time for each of Again / Hard / Good / Easy plus a
+  growth factor. **Reset to defaults** undoes any changes.
+- **Quiz** — default answer placement and whether source and difficulty are printed.
+
+### ⌨️ Shortcuts
 
 | Shortcut | Action |
 |---|---|
 | `⌘K` | Command palette (every action, searchable) |
 | `⌘P` | Quick search — jump straight to any question |
 | `⌘N` | New question |
-| `⌘1–⌘7` | Review · Questions · Notes · Papers · Quiz · Import · Progress |
+| `⌘1`–`⌘7` | Review · Questions · Notes · Papers · Quiz · Import · Progress |
 | `⌘,` | Settings |
-| `⌘Enter` | Save question (batch entry) |
-| `Space` / `1–4` / `Esc` | Review: reveal / grade / end session |
+| `⌘Enter` | Save question (and start the next) |
+| `Enter` | Start review (on the Review screen) |
+| `Space` / `1`–`4` / `Esc` | In a session: reveal / grade / end |
 | `⌘S` | Save note |
 
-### 🎨 Themes
+---
 
-Six presets — Light, Dark, Sepia (warm paper + serif), Nord, Forest, and Violet — each
-restyling the accent colour, backgrounds, borders and font. Pick one on the **Settings**
-page (`⌘,`) or via the command palette; your choice persists across launches (and travels
-with the vault).
+## Building from source
+
+You need [Node.js](https://nodejs.org) 20+ and [Rust](https://rustup.rs); on Linux also the
+[Tauri system libraries](https://tauri.app/start/prerequisites/).
+
+```bash
+git clone https://github.com/yzyun/Noggin.git && cd Noggin
+npm install
+```
+
+```bash
+npm run tauri dev      # run the desktop app in development
+```
+
+```bash
+npm run dev            # UI only, in a browser, against an in-memory demo vault (no Rust needed)
+```
+
+```bash
+npm run tauri build    # produce the installer for your platform (src-tauri/target/release/bundle/)
+```
+
+```bash
+npm test               # unit tests
+```
+
+**Releases** are built by GitHub Actions ([`build.yml`](./.github/workflows/build.yml)).
+Every pull request gets installers for all platforms as downloadable artifacts on its
+workflow run. Pushing a version tag builds them again and attaches them to a draft release
+to review and publish:
+
+```bash
+git tag v0.8.0 && git push origin v0.8.0
+```
 
 ---
 
@@ -232,7 +295,7 @@ Tailwind v4 · CodeMirror 6 · react-markdown + KaTeX · [ts-fsrs](https://githu
 
 The codebase keeps extension points (content-renderer / card-type / importer / command
 registries, an `AIProvider` seam) for what's next: cloze & image-occlusion cards, Anki
-import/export, TikZ/plot rendering, analytics dashboards, AI-assisted card generation, and a
+import/export, TikZ/plot rendering, AI-assisted card generation, and a
 mobile companion (Tauri mobile targets).
 
 ## License

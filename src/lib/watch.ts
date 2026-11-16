@@ -12,7 +12,7 @@ export async function startVaultWatch(): Promise<UnlistenFn> {
   let questionsChanged = false;
 
   const unlisten = await listen<string[]>("vault:changed", (event) => {
-    if (event.payload.some((p) => p.includes("/questions/"))) {
+    if (event.payload.some((p) => /[\\/]questions[\\/]/.test(p))) {
       questionsChanged = true;
     }
     if (timer) clearTimeout(timer);

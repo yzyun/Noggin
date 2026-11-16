@@ -132,7 +132,7 @@ export function Shell() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const vaultName = root?.split("/").filter(Boolean).pop() ?? "";
+  const vaultName = root?.split(/[\\/]/).filter(Boolean).pop() ?? "";
   const due = review?.due_now ?? 0;
 
   return (
