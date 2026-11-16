@@ -3,8 +3,11 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { parseQuestionFile } from "../domain/format";
+import { parseReviewLog } from "../domain/progress";
 import type { IndexStats, QuestionDoc, QuestionRow } from "../domain/types";
 import type { CardRow, ReviewLogEntry } from "../domain/srs";
+
+const REVIEW_LOG_PATH = ".studydb/review-log.jsonl";
 
 export interface DueEntry {
   question: QuestionRow;
@@ -86,6 +89,17 @@ export const ipc = {
   reviewLogAdd: (entry: ReviewLogEntry) => invoke<void>("review_log_add", { entry }),
   reviewStats: (now: string, todayStart: string) =>
     invoke<ReviewStats>("review_stats", { now, todayStart }),
+
+  /** Every card with its question — the due queue asked "as of" the far
+   *  future, which is everything. */
+  allCards: () => invoke<DueEntry[]>("cards_due", {
+    params: EMPTY_SEARCH,
+    now: "9999-12-31T23:59:59.999Z",
+    limit: 1_000_000,
+  }),
+  /** The append-only review history (.studydb/review-log.jsonl), parsed. */
+  reviewLog: async (): Promise<ReviewLogEntry[]> =>
+    parseReviewLog(await invoke<string>("vault_read_file", { rel: REVIEW_LOG_PATH }).catch(() => "")),
 
   /** Native print dialog; resolves false when the platform needs window.print(). */
   printPage: () => invoke<boolean>("print_page"),

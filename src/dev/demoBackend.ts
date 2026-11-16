@@ -88,6 +88,10 @@ function matches(q: QuestionRow & { fts: string }, p: SearchParams): boolean {
   return true;
 }
 
+function writeLog() {
+  write(".studydb/review-log.jsonl", { text: log.map((e) => JSON.stringify(e)).join("\n") + "\n" });
+}
+
 const toRow = ({ fts: _fts, ...row }: QuestionRow & { fts: string }): QuestionRow => row;
 const byIdDesc = (a: QuestionRow, b: QuestionRow) => (a.id < b.id ? 1 : -1);
 
@@ -207,6 +211,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
   },
   review_log_add: ({ entry }) => {
     log.push(entry);
+    writeLog();
   },
   review_stats: ({ now, todayStart }) => {
     const all = [...cards.values()];
@@ -268,7 +273,8 @@ function seededCard(id: string): CardRow {
     reps: 3,
     last_review: at(hours - 96),
     elapsed_days: 4,
-    scheduled_days: 4,
+    // Far-off cards are the well-known ones.
+    scheduled_days: hours > 72 ? 34 : hours > 24 ? 9 : 4,
   };
 }
 
@@ -446,6 +452,30 @@ function seedVault() {
   });
   write("notes/Study plan.md", { text: "# Study plan\n\n- [x] Mechanics\n- [ ] Electricity\n- [ ] Calculus revision\n" });
   mkdirp("papers/2025");
+
+  // ~10 weeks of plausible history for the cards that have been studied
+  // (deterministic, so screenshots are stable). Ends yesterday.
+  const studied = Object.keys(SEED_DUE_HOURS);
+  let seed = 7;
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let day = 70; day >= 1; day--) {
+    if (day > 6 && rand() < 0.22) continue; // the odd day off, but a live streak
+    const n = 2 + Math.floor(rand() * (day < 30 ? 9 : 5));
+    for (let i = 0; i < n; i++) {
+      const at = new Date(Date.now() - day * 86_400_000);
+      at.setHours(9 + Math.floor(rand() * 10), Math.floor(rand() * 60));
+      const r = rand();
+      log.push({
+        question_id: studied[Math.floor(rand() * studied.length)],
+        rating: r < 0.13 ? 1 : r < 0.3 ? 2 : r < 0.85 ? 3 : 4,
+        mode: "flashcard",
+        reviewed_at: at.toISOString(),
+        elapsed_days: 1,
+        scheduled_days: 3,
+      });
+    }
+  }
+  writeLog();
 }
 
 export function installDemoBackend(): void {

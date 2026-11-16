@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { QuestionDoc, QuestionRow } from "../domain/types";
+import { isDue, stageOf } from "../domain/progress";
+import { fmtInterval } from "../domain/srs";
 import { useQuestions } from "../state/questions";
+import { useReview } from "../state/review";
 import { confirmDialog, errorDialog, useUi } from "../state/ui";
 import { DND_QUESTIONS, FilterPanel } from "./FilterPanel";
 import { Markdown } from "./Markdown";
@@ -297,6 +300,7 @@ function QuestionCard({
             ))}
           </div>
         )}
+        <ReviewStatus id={row.id} />
         <Difficulty level={row.difficulty} />
         <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-focus-within/row:opacity-100 group-hover/row:opacity-100">
           <button
@@ -368,6 +372,42 @@ function Difficulty({ level }: { level: number | null }) {
           }`}
         />
       ))}
+    </span>
+  );
+}
+
+/** Where the question stands in the review schedule: New, Learning, Due, or
+ *  when it next comes up. */
+function ReviewStatus({ id }: { id: string }) {
+  const card = useReview((s) => s.cards.get(id));
+  if (!card) return <span className="w-16 shrink-0" />;
+  const now = new Date();
+  const base = "w-16 shrink-0 text-right text-xs whitespace-nowrap";
+
+  if (card.state === "new") {
+    return (
+      <span className={`${base} text-neutral-400`} title="Not reviewed yet">
+        New
+      </span>
+    );
+  }
+  if (isDue(card, now)) {
+    return (
+      <span className={base} title={`Due ${fmtInterval(new Date(card.due!), now)} ago`}>
+        <span className="rounded-full bg-accent-soft px-2 py-0.5 font-medium text-accent-text">
+          Due
+        </span>
+      </span>
+    );
+  }
+  const next = card.due ? `in ${fmtInterval(now, new Date(card.due))}` : "";
+  const stage = stageOf(card);
+  return (
+    <span
+      className={`${base} text-neutral-500 tabular-nums dark:text-neutral-400`}
+      title={`${stage === "learning" ? "Learning" : stage === "mature" ? "Mature" : "Young"} · next review ${next} · reviewed ${card.reps} time${card.reps === 1 ? "" : "s"}`}
+    >
+      {next}
     </span>
   );
 }

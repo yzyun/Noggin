@@ -3,19 +3,26 @@
 
 import { create } from "zustand";
 import { ipc, type ReviewStats } from "../lib/ipc";
-import { todayStartIso } from "../domain/srs";
+import { todayStartIso, type CardRow } from "../domain/srs";
 
 interface ReviewStore {
   stats: ReviewStats | null;
+  /** Schedule card per question id — review status on question rows. */
+  cards: Map<string, CardRow>;
   refresh(): Promise<void>;
 }
 
 export const useReview = create<ReviewStore>((set) => ({
   stats: null,
+  cards: new Map(),
   async refresh() {
     try {
       const now = new Date();
-      set({ stats: await ipc.reviewStats(now.toISOString(), todayStartIso(now)) });
+      const [stats, all] = await Promise.all([
+        ipc.reviewStats(now.toISOString(), todayStartIso(now)),
+        ipc.allCards(),
+      ]);
+      set({ stats, cards: new Map(all.map((e) => [e.question.id, e.card])) });
     } catch {
       /* vault closed mid-flight */
     }

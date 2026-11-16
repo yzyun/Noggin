@@ -15,6 +15,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { QuestionsView } from "./QuestionsView";
 import { NotesView, PapersView } from "./FileLibrary";
 import { ReviewView } from "./ReviewView";
+import { ProgressView } from "./ProgressView";
 import { ImportView } from "./ImportView";
 import { QuizView } from "./QuizView";
 import { SettingsView } from "./SettingsView";
@@ -24,6 +25,7 @@ import {
   NoteIcon,
   PaperIcon,
   PlusIcon,
+  ProgressIcon,
   QuestionIcon,
   QuizIcon,
   ReviewIcon,
@@ -42,6 +44,7 @@ interface NavItem {
 // Study first, library second — the order ⌘1–⌘6 follow (lib/commands.ts).
 const STUDY: NavItem[] = [
   { id: "review", label: "Review", shortcut: "⌘1", icon: <ReviewIcon /> },
+  { id: "progress", label: "Progress", shortcut: "⌘7", icon: <ProgressIcon /> },
   { id: "quiz", label: "Quiz", shortcut: "⌘5", icon: <QuizIcon /> },
 ];
 const LIBRARY: NavItem[] = [
@@ -120,7 +123,7 @@ export function Shell() {
     return () => clearInterval(timer);
   }, [view, bankSize, focusMode]);
 
-  // Global shortcuts (⌘K palette, ⌘P search, ⌘N, ⌘, settings, ⌘1–6).
+  // Global shortcuts (⌘K palette, ⌘P search, ⌘N, ⌘, settings, ⌘1–7).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (handleGlobalShortcut(e)) e.preventDefault();
@@ -192,6 +195,7 @@ export function Shell() {
                 }
               />
               <NavRow item={STUDY[1]} />
+              <NavRow item={STUDY[2]} />
             </div>
 
             <GroupLabel>Library</GroupLabel>
@@ -230,6 +234,8 @@ export function Shell() {
           <PapersView />
         ) : view === "review" ? (
           <ReviewView />
+        ) : view === "progress" ? (
+          <ProgressView />
         ) : view === "import" ? (
           <ImportView />
         ) : view === "settings" ? (

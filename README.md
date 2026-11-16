@@ -151,6 +151,19 @@ During a session:
 - **Hints and solutions** are revealed only on request, so they never spoil recall.
 - Every review is appended to `review-log.jsonl` — your complete study history, forever.
 
+### 📈 Progress
+
+A read-only view of how study is going, built from the review log and your card schedule:
+
+- **Headline numbers** — current streak, reviews and recall rate over the last 30 days, and
+  how many cards are mature (interval of 3 weeks or more).
+- **Reviews per day** for the last 30 days and an **activity calendar** for the last 26 weeks.
+- **Where your cards are** — not started, learning, young, mature — and the same picture
+  **per subject**, with what's due now.
+
+In the question list, every row also shows its review status: **New**, **Due**, or when it
+next comes up ("in 3d").
+
 ### ⚙️ Settings
 
 A dedicated **Settings** section (`⌘,`) — stored in `.studydb/config.json`, so your
@@ -196,7 +209,7 @@ Three ways:
 | `⌘K` | Command palette (every action, searchable) |
 | `⌘P` | Quick search — jump straight to any question |
 | `⌘N` | New question |
-| `⌘1–⌘6` | Review · Questions · Notes · Papers · Quiz · Import |
+| `⌘1–⌘7` | Review · Questions · Notes · Papers · Quiz · Import · Progress |
 | `⌘,` | Settings |
 | `⌘Enter` | Save question (batch entry) |
 | `Space` / `1–4` / `Esc` | Review: reveal / grade / end session |

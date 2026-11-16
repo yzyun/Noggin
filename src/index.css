@@ -61,6 +61,41 @@ html.dark {
   --muted-400: #a8a29e;
 }
 
+/* Data-viz colours (Progress). One blue hue throughout, stepped per mode so
+   "more" always moves away from the surface; fixed across themes because a
+   chart colour encodes data, not brand. */
+:root {
+  --viz: #2a78d6;
+  --viz-seq-1: #b7d3f6;
+  --viz-seq-2: #6da7ec;
+  --viz-seq-3: #2a78d6;
+  --viz-seq-4: #184f95;
+  --viz-learning: #86b6ef;
+  --viz-young: #3987e5;
+  --viz-mature: #184f95;
+  --viz-track: #e9e6e2; /* zero / unfilled */
+  --viz-none: #d6d3d1; /* "not started" segment */
+  /* label ink inside a fill, by that fill's luminance */
+  --viz-on-light-step: #0b0b0b;
+  --viz-ink-learning: #0b0b0b;
+  --viz-ink-mature: #ffffff;
+}
+html.dark {
+  --viz: #3987e5;
+  --viz-seq-1: #104281;
+  --viz-seq-2: #1c5cab;
+  --viz-seq-3: #3987e5;
+  --viz-seq-4: #86b6ef;
+  --viz-learning: #184f95;
+  --viz-young: #3987e5;
+  --viz-mature: #9ec5f4;
+  --viz-track: #2b2825;
+  --viz-none: #57534e;
+  --viz-on-light-step: #ffffff;
+  --viz-ink-learning: #ffffff;
+  --viz-ink-mature: #0b0b0b;
+}
+
 html[data-theme="dark"] {
   --accent: #edeae6;
   --accent-hover: #ffffff;

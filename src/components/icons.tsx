@@ -119,6 +119,14 @@ export const ShuffleIcon = icon(
   <path d="M3 7h3.5c2 0 3.5 1 4.5 2.5l2 3c1 1.5 2.5 2.5 4.5 2.5H21M3 17h3.5c1.5 0 2.700-.6 3.600-1.5M14 8.5c.9-.9 2.100-1.5 3.5-1.5H21M18 4l3 3-3 3M18 14l3 3-3 3" />,
 );
 
+/** Rising columns — progress. */
+export const ProgressIcon = icon(<path d="M4 20V13M10 20V8M16 20v-5M22 20V4" transform="translate(-1 0)" />);
+
+/** Flame — streak. */
+export const FlameIcon = icon(
+  <path d="M12 21.5a6.5 6.5 0 0 0 6.5-6.5c0-3-1.8-4.8-3-6.5-.5 1.5-1.200 2.3-2.5 3 .4-3-.8-6-3.5-8 .3 3-1.3 4.600-2.5 6.200A8.3 8.3 0 0 0 5.5 15a6.5 6.5 0 0 0 6.5 6.5Z" />,
+);
+
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
 
 export const PencilIcon = icon(

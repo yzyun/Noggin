@@ -9,6 +9,7 @@ export type View =
   | "notes"
   | "papers"
   | "review"
+  | "progress"
   | "import"
   | "quiz"
   | "settings";
