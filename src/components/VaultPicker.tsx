@@ -1,6 +1,7 @@
 // First-launch screen: choose (or create) the vault folder.
 
 import { useVault } from "../state/vault";
+import { Logo } from "./icons";
 import { Button } from "./ui/Button";
 
 export function VaultPicker() {
@@ -8,8 +9,9 @@ export function VaultPicker() {
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6 px-8">
+      <Logo className="h-16 w-16 rounded-2xl shadow-sm" />
       <div className="text-center">
-        <h1 className="text-3xl font-semibold tracking-tight">Welcome to your Noggin</h1>
+        <h1 className="font-display text-4xl font-semibold tracking-tight">Welcome to your Noggin</h1>
         <p className="mt-2 max-w-md text-sm text-neutral-500 dark:text-neutral-400">
           Your questions and notes live in a plain folder on disk — a{" "}
           <span className="font-medium">vault</span> — as portable Markdown files, just like

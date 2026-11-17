@@ -7,22 +7,29 @@ interface Props {
 
 export function DifficultyPicker({ value, onChange }: Props) {
   return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => onChange(value === n ? null : n)}
-          className={`h-8 w-8 rounded-md border text-sm font-medium transition ${
-            value !== null && n <= value
-              ? "border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-200"
-              : "border-edge text-neutral-400 hover:border-neutral-400 dark:text-neutral-500"
-          }`}
-          title={`difficulty ${n}`}
-        >
-          {n}
-        </button>
-      ))}
+    <div className="flex items-center gap-2">
+      <div className="flex gap-1" role="radiogroup" aria-label="Difficulty">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            onClick={() => onChange(value === n ? null : n)}
+            className={`h-7 w-7 rounded-md border text-xs font-medium transition-colors ${
+              value !== null && n <= value
+                ? "border-neutral-800 bg-neutral-800 text-white dark:border-neutral-200 dark:bg-neutral-200 dark:text-neutral-900"
+                : "border-edge bg-surface text-neutral-500 hover:border-neutral-400 dark:text-neutral-400"
+            }`}
+            title={value === n ? "Click again to clear" : `Difficulty ${n} of 5`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      <span className="text-xs text-neutral-400">
+        {value === null ? "not set" : ["", "very easy", "easy", "medium", "hard", "very hard"][value]}
+      </span>
     </div>
   );
 }

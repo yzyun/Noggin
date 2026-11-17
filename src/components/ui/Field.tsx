@@ -3,7 +3,7 @@
 
 export const LABEL = "mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400";
 export const INPUT =
-  "rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm outline-none focus:border-accent";
+  "rounded-md border border-edge bg-surface px-2.5 py-1.5 text-sm outline-none transition-shadow placeholder:text-neutral-400 focus:border-neutral-400 focus:ring-2 focus:ring-accent/10 dark:focus:border-neutral-500";
 
 export function Field({
   label,

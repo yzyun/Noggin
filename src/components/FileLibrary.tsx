@@ -12,6 +12,7 @@ import { ipc, type DirEntry } from "../lib/ipc";
 import { slugify } from "../domain/title";
 import { confirmDialog, errorDialog, textPrompt } from "../state/ui";
 import { Button } from "./ui/Button";
+import { Segmented } from "./ui/Segmented";
 import { FolderTree } from "./ui/FolderTree";
 import { buildFolderTree } from "../lib/folderTree";
 import { MarkdownField } from "./fields/MarkdownField";
@@ -149,13 +150,16 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
       const blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
       setPdfUrl(URL.createObjectURL(blob));
       setText("");
+      setPreview(false);
     } else {
-      setText(await ipc.readFile(rel));
+      const contents = await ipc.readFile(rel);
+      setText(contents);
       setPdfUrl(null);
+      // Notes open to be read; a blank (just-created) one opens for writing.
+      setPreview(extOf(rel) === "md" && contents.trim() !== "");
     }
     setOpenRel(rel);
     setDirty(false);
-    setPreview(false);
   };
 
   const saveFile = useCallback(async () => {
@@ -461,7 +465,7 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
       <div className="flex min-w-0 flex-1 flex-col">
         {openRel ? (
           <>
-            <div className="flex items-center justify-between border-b border-edge px-4 py-2.5">
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-edge px-5">
               <span className="truncate text-sm font-medium">
                 {openExt === "md" ? openName.replace(/\.md$/, "") : openName}
                 {dirty && <span className="ml-1 text-neutral-400">•</span>}
@@ -469,9 +473,14 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
               {openExt !== "pdf" && (
                 <div className="flex gap-2">
                   {openExt === "md" && (
-                    <Button variant="ghost" onClick={() => setPreview((p) => !p)}>
-                      {preview ? "Edit" : "Preview"}
-                    </Button>
+                    <Segmented<"read" | "edit">
+                      value={preview ? "read" : "edit"}
+                      options={[
+                        ["read", "Read"],
+                        ["edit", "Edit"],
+                      ]}
+                      onChange={(v) => setPreview(v === "read")}
+                    />
                   )}
                   <Button onClick={saveFile} disabled={!dirty} title="Cmd/Ctrl+S">
                     Save
@@ -486,7 +495,9 @@ function FileLibrary({ cfg }: { cfg: LibraryConfig }) {
             ) : (
               <div className="min-h-0 flex-1 overflow-y-auto p-4">
                 {preview && openExt === "md" ? (
-                  <Markdown text={text} />
+                  <article className="mx-auto max-w-2xl px-4 py-6">
+                    <Markdown text={text} />
+                  </article>
                 ) : (
                   <MarkdownField
                     value={text}

@@ -31,25 +31,25 @@ export function registerCoreCommands(): void {
   commands.register({
     id: "go-questions",
     title: "Go to Questions",
-    shortcut: "⌘1",
+    shortcut: "⌘2",
     run: () => ui().setView("questions"),
   });
   commands.register({
     id: "go-notes",
     title: "Go to Notes",
-    shortcut: "⌘2",
+    shortcut: "⌘3",
     run: () => ui().setView("notes"),
   });
   commands.register({
     id: "go-papers",
     title: "Go to Papers",
-    shortcut: "⌘3",
+    shortcut: "⌘4",
     run: () => ui().setView("papers"),
   });
   commands.register({
     id: "go-review",
     title: "Go to Review",
-    shortcut: "⌘4",
+    shortcut: "⌘1",
     run: () => ui().setView("review"),
   });
   commands.register({
@@ -63,6 +63,12 @@ export function registerCoreCommands(): void {
     title: "Go to Import",
     shortcut: "⌘6",
     run: () => ui().setView("import"),
+  });
+  commands.register({
+    id: "go-progress",
+    title: "Go to Progress",
+    shortcut: "⌘7",
+    run: () => ui().setView("progress"),
   });
   commands.register({
     id: "go-settings",
@@ -90,7 +96,7 @@ export function registerCoreCommands(): void {
   });
 }
 
-/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘, settings, ⌘1–6). */
+/** Global shortcut handling (⌘K palette, ⌘P search, ⌘N, ⌘, settings, ⌘1–7). */
 export function handleGlobalShortcut(e: KeyboardEvent): boolean {
   if (!(e.metaKey || e.ctrlKey)) return false;
   const key = e.key.toLowerCase();
@@ -112,7 +118,7 @@ export function handleGlobalShortcut(e: KeyboardEvent): boolean {
     useUi.getState().setView("settings");
     return true;
   }
-  const views = ["questions", "notes", "papers", "review", "quiz", "import"] as const;
+  const views = ["review", "questions", "notes", "papers", "quiz", "import", "progress"] as const;
   const idx = Number(e.key) - 1;
   if (idx >= 0 && idx < views.length && e.key === String(idx + 1)) {
     useUi.getState().setView(views[idx]);

@@ -8,15 +8,15 @@ type Size = "sm" | "lg";
 
 const STYLES: Record<Variant, Record<Size, string>> = {
   primary: {
-    sm: "rounded-md bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover",
-    lg: "rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm transition hover:bg-accent-hover",
+    sm: "rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-on-accent transition-colors hover:bg-accent-hover",
+    lg: "rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-on-accent shadow-sm transition-colors hover:bg-accent-hover",
   },
   ghost: {
-    sm: "rounded-md border border-edge px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800",
+    sm: "rounded-md border border-edge bg-surface px-2.5 py-[5px] text-xs text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800",
     lg: "rounded-lg border border-edge px-5 py-2.5 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800",
   },
   danger: {
-    sm: "rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-500",
+    sm: "rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500",
     lg: "rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-500",
   },
 };
@@ -36,7 +36,7 @@ export function Button({
   return (
     <button
       type={type}
-      className={`${STYLES[variant][size]} disabled:opacity-40 ${className}`}
+      className={`${STYLES[variant][size]} disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
       {...rest}
     />
   );

@@ -3,6 +3,7 @@
 // section's markdown. (Pasting directly into the textbox also still works.)
 
 import { useRef, useState } from "react";
+import { ImageIcon } from "../icons";
 import { imagesFromDataTransfer, saveImageToAttachments } from "../../lib/images";
 
 interface Props {
@@ -41,13 +42,15 @@ export function ImageDrop({ onInsert }: Props) {
           setOver(false);
           void handleFiles(imagesFromDataTransfer(e.dataTransfer));
         }}
-        className={`mt-1 flex w-full items-center justify-center gap-2 rounded-md border border-dashed px-3 py-2 text-xs transition ${
+        title="Browse for an image, or drop one here. You can also paste straight into the text box."
+        className={`mt-1.5 flex items-center gap-1.5 rounded-md border border-dashed px-2 py-1 text-xs transition-colors ${
           over
             ? "border-accent bg-accent-soft text-accent-text"
-            : "border-edge text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+            : "border-transparent text-neutral-500 hover:border-edge hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-100"
         }`}
       >
-        {busy ? "Adding image…" : "🖼 Drop an image here, or click to browse"}
+        <ImageIcon className="h-3.5 w-3.5" />
+        {busy ? "Adding image…" : over ? "Drop to add" : "Add image"}
       </button>
       <input
         ref={inputRef}

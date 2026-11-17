@@ -14,8 +14,15 @@ describe("effectiveTitle", () => {
 describe("deriveTitle", () => {
   it("takes the first meaningful line, stripped of markup", () => {
     expect(deriveTitle("A ball is thrown at $30^\\circ$ upward.\nMore text")).toBe(
-      "A ball is thrown at [math] upward.",
+      "A ball is thrown at $30^\\circ$ upward.",
     );
+  });
+  it("keeps math intact: display → inline, no markup stripping inside", () => {
+    expect(deriveTitle("Find $$a_n * b_n$$ for *all* n")).toBe("Find $a_n * b_n$ for all n");
+  });
+  it("never truncates in the middle of a math span", () => {
+    const t = deriveTitle(`${"x".repeat(70)} $\\frac{a}{b} + \\frac{c}{d}$ tail`);
+    expect(t).toBe(`${"x".repeat(70)}…`);
   });
   it("skips images and blank lines", () => {
     expect(deriveTitle("![setup](attachments/a.png)\n\nFind the range.")).toBe("Find the range.");

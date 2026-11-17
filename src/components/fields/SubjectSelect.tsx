@@ -78,7 +78,7 @@ export function SubjectSelect({ value, onChange, recent }: Props) {
                   f === value ? "font-medium text-accent-text" : ""
                 }`}
               >
-                📁 {f}
+                {f}
               </button>
             </li>
           ))}

@@ -5,7 +5,7 @@
 // Both converge on onStart(entries, mode); the daily new-card limit is
 // applied at every entry point.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { applyDailyNewLimit, fmtInterval, todayStartIso } from "../domain/srs";
 import { SESSION_MODE_OPTIONS, type SessionMode } from "../domain/settings";
 import { EMPTY_SEARCH, ipc, searchParams, type DueEntry, type ReviewStats, type SearchParams } from "../lib/ipc";
@@ -14,6 +14,8 @@ import { useQuestions } from "../state/questions";
 import { useSettings } from "../state/settings";
 import { SubjectSelect } from "./fields/SubjectSelect";
 import { TagInput } from "./fields/TagInput";
+import { ChevronIcon } from "./icons";
+import { TitleText } from "./TitleText";
 import { Button } from "./ui/Button";
 import { Field, INPUT } from "./ui/Field";
 import { Segmented } from "./ui/Segmented";
@@ -52,62 +54,162 @@ function dueLabel(e: DueEntry, now: Date): string {
   return due <= now ? `due ${fmtInterval(due, now)} ago` : `due in ${fmtInterval(now, due)}`;
 }
 
+/** The next 7 calendar days with how many cards fall due on each. Days are
+ *  keyed the way the backend buckets them (UTC date of the due timestamp). */
+function forecast(upcoming: [string, number][], now: Date) {
+  const counts = new Map(upcoming);
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(now.getTime() + i * 86_400_000);
+    return {
+      key: day.toISOString().slice(0, 10),
+      label: i === 0 ? "Today" : day.toLocaleDateString(undefined, { weekday: "short" }),
+      count: counts.get(day.toISOString().slice(0, 10)) ?? 0,
+    };
+  });
+}
+
+function Stat({ value, label }: { value: React.ReactNode; label: string }) {
+  return (
+    <div>
+      <div className="text-2xl font-semibold tabular-nums">{value}</div>
+      <div className="text-xs text-neutral-500 dark:text-neutral-400">{label}</div>
+    </div>
+  );
+}
+
 export function ReviewSetup({
   onStart,
 }: {
   onStart(entries: DueEntry[], mode: SessionMode): void;
 }) {
   const [tab, setTab] = useState<Tab>("due");
-  const stats: ReviewStats | null = useAsync(() => {
-    const now = new Date();
-    return ipc.reviewStats(now.toISOString(), todayStartIso(now));
-  }, []);
+  const session = useSettings((s) => s.settings.session);
+  const now = useMemo(() => new Date(), []);
+  // Re-query when the bank changes underneath us (first index of a vault,
+  // files edited or dropped in from outside).
+  const bank = useQuestions((s) => s.allRows);
+  const stats: ReviewStats | null = useAsync(
+    () => ipc.reviewStats(now.toISOString(), todayStartIso(now)),
+    [bank],
+    { reset: false },
+  );
+  const entries = useAsync(() => ipc.cardsDue(EMPTY_SEARCH).catch(() => []), [bank], {
+    reset: false,
+  });
 
   const newToday = stats?.new_today ?? 0;
+  // What "Start review" actually contains, after the daily new-card budget
+  // and the session size cap.
+  const ready = entries
+    ? applyDailyNewLimit(entries, newToday, session.dailyNewLimit).slice(0, session.defaultMaxCards)
+    : null;
+  const days = stats ? forecast(stats.upcoming, now) : [];
+  const peak = Math.max(1, ...days.map((d) => d.count));
+
+  // Enter starts the default session straight from the dashboard.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.key !== "Enter" || e.metaKey || e.ctrlKey || el.closest("input, textarea, button, .cm-editor, [role=dialog]"))
+        return;
+      if (tab === "due" && ready && ready.length > 0) onStart(ready, session.defaultMode);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tab, ready, session.defaultMode, onStart]);
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-        <div>
-          <h2 className="text-xl font-semibold">Review</h2>
-          {stats && (
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              {stats.due_now} due · {stats.new_count} new · {stats.reviews_today} reviewed today ·{" "}
-              {stats.total_reviews} all-time
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-10">
+        {/* Hero: the one thing to do next */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
             </p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight">
+              {ready === null
+                ? " "
+                : ready.length === 0
+                  ? "You're all caught up"
+                  : `${ready.length} card${ready.length === 1 ? "" : "s"} to review`}
+            </h1>
+            {ready !== null && (
+              <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                {ready.length === 0
+                  ? "Nothing is due right now. Add questions, or review ahead with a custom session."
+                  : (() => {
+                      const fresh = ready.filter((e) => e.card.state === "new").length;
+                      const parts = [
+                        ready.length - fresh > 0 && `${ready.length - fresh} due`,
+                        fresh > 0 && `${fresh} new`,
+                      ].filter(Boolean);
+                      const more = (entries?.length ?? 0) - ready.length;
+                      return `${parts.join(" and ")}${more > 0 ? ` · ${more} more waiting after this session` : ""}`;
+                    })()}
+              </p>
+            )}
+          </div>
+          {ready !== null && ready.length > 0 && (
+            <Button size="lg" onClick={() => onStart(ready, session.defaultMode)}>
+              <span className="flex items-center gap-2">
+                Start review
+                <kbd className="rounded border border-current/25 px-1 font-sans text-[10px] leading-4 opacity-70">
+                  Enter
+                </kbd>
+              </span>
+            </Button>
           )}
         </div>
 
-        {/* Upcoming load */}
-        {stats && stats.upcoming.length > 0 && (
-          <div className="flex items-end gap-1">
-            {stats.upcoming.map(([day, n]) => (
-              <div key={day} className="flex flex-col items-center gap-0.5">
-                <div
-                  className="w-8 rounded-t bg-accent/60"
-                  style={{ height: `${Math.min(60, 8 + n * 6)}px` }}
-                  title={`${day}: ${n} due`}
-                />
-                <span className="text-[10px] text-neutral-400">{day.slice(5)}</span>
+        {/* Stats + 7-day forecast */}
+        {stats && (
+          <div className="grid gap-6 rounded-xl border border-edge bg-surface p-5 sm:grid-cols-[auto_1fr]">
+            <div className="flex gap-8 sm:flex-col sm:justify-between sm:gap-3 sm:border-r sm:border-edge sm:pr-8">
+              <Stat value={stats.reviews_today} label="reviewed today" />
+              <Stat value={stats.new_count} label="not yet started" />
+              <Stat value={stats.total_reviews} label="reviews all-time" />
+            </div>
+            <div className="flex min-w-0 flex-col">
+              <div className="mb-3 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                Coming up — cards falling due over the next 7 days
               </div>
-            ))}
+              <div className="grid flex-1 grid-cols-7 items-end gap-2">
+                {days.map((d) => (
+                  <div key={d.key} className="flex flex-col items-center gap-1" title={`${d.key}: ${d.count} due`}>
+                    <span className={`text-xs tabular-nums ${d.count ? "font-medium" : "text-neutral-400"}`}>
+                      {d.count}
+                    </span>
+                    <div className="flex h-16 w-full items-end">
+                      <div
+                        className={`mx-auto w-full max-w-8 rounded-t-md ${d.count ? "bg-neutral-700 dark:bg-neutral-300" : "bg-neutral-200 dark:bg-neutral-800"}`}
+                        style={{ height: d.count ? `${Math.max(12, (d.count / peak) * 100)}%` : "2px" }}
+                      />
+                    </div>
+                    <span className="text-[11px] text-neutral-500 dark:text-neutral-400">{d.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Tabs */}
-        <Segmented<Tab>
-          size="md"
-          className="w-fit"
-          value={tab}
-          options={[
-            ["due", "Due now"],
-            ["custom", "Custom session"],
-          ]}
-          onChange={setTab}
-        />
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">
+            {tab === "due" ? "By subject" : "Custom session"}
+          </h2>
+          <Segmented<Tab>
+            value={tab}
+            options={[
+              ["due", "Due now"],
+              ["custom", "Custom session"],
+            ]}
+            onChange={setTab}
+          />
+        </div>
 
         {tab === "due" ? (
-          <DueDashboard newToday={newToday} onStart={onStart} />
+          <DueDashboard entries={entries} newToday={newToday} onStart={onStart} />
         ) : (
           <CustomSession newToday={newToday} onStart={onStart} />
         )}
@@ -121,9 +223,11 @@ export function ReviewSetup({
 // ---------------------------------------------------------------------------
 
 function DueDashboard({
+  entries,
   newToday,
   onStart,
 }: {
+  entries: DueEntry[] | null;
   newToday: number;
   onStart(entries: DueEntry[], mode: SessionMode): void;
 }) {
@@ -131,16 +235,10 @@ function DueDashboard({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const now = useMemo(() => new Date(), []);
 
-  const entries = useAsync(() => ipc.cardsDue(EMPTY_SEARCH).catch(() => []), []);
-
   const groups = useMemo(() => (entries ? groupBySubject(entries) : []), [entries]);
 
-  // What a session over `pool` would actually contain, after the daily
-  // new-card budget and session size cap.
   const sessionOf = (pool: DueEntry[]) =>
     applyDailyNewLimit(pool, newToday, session.dailyNewLimit).slice(0, session.defaultMaxCards);
-
-  const allSession = sessionOf(entries ?? []);
 
   const toggle = (subject: string) =>
     setExpanded((prev) => {
@@ -155,87 +253,70 @@ function DueDashboard({
   }
   if (groups.length === 0) {
     return (
-      <div className="rounded-lg border border-edge bg-surface p-8 text-center">
-        <p className="text-lg">Nothing due 🎉</p>
-        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          Come back later, or start a custom session to review ahead.
-        </p>
+      <div className="rounded-xl border border-dashed border-edge p-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+        No subjects have cards waiting.
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="divide-y divide-edge rounded-lg border border-edge bg-surface">
-        {groups.map((g) => {
-          const pool = [...g.due, ...g.fresh];
-          const subjectSession = sessionOf(pool);
-          const open = expanded.has(g.subject);
-          return (
-            <div key={g.subject}>
-              <div className="flex items-center gap-2 px-3 py-2">
-                <button
-                  onClick={() => toggle(g.subject)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  title={open ? "Collapse" : "Show questions"}
-                >
-                  <span
-                    className={`text-xs text-neutral-400 transition-transform ${open ? "rotate-90" : ""}`}
-                  >
-                    ▶
+    <div className="divide-y divide-edge overflow-hidden rounded-xl border border-edge bg-surface">
+      {groups.map((g) => {
+        const pool = [...g.due, ...g.fresh];
+        const subjectSession = sessionOf(pool);
+        const open = expanded.has(g.subject);
+        return (
+          <div key={g.subject}>
+            <div className="flex items-center gap-3 px-4 py-3">
+              <button
+                onClick={() => toggle(g.subject)}
+                aria-expanded={open}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                title={open ? "Collapse" : "Show questions"}
+              >
+                <ChevronIcon
+                  className={`h-3.5 w-3.5 shrink-0 text-neutral-400 transition-transform ${open ? "rotate-90" : ""}`}
+                />
+                <span className="truncate text-sm font-medium capitalize">{g.subject}</span>
+              </button>
+              <span className="flex shrink-0 items-center gap-1.5 text-xs">
+                {g.due.length > 0 && (
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 font-medium text-accent-text">
+                    {g.due.length} due
                   </span>
-                  <span className="truncate text-sm font-medium">{g.subject}</span>
-                  <span className="shrink-0 text-xs text-neutral-500 dark:text-neutral-400">
-                    {g.due.length} due · {g.fresh.length} new
+                )}
+                {g.fresh.length > 0 && (
+                  <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                    {g.fresh.length} new
                   </span>
-                </button>
-                <Button
-                  variant="ghost"
-                  className="shrink-0"
-                  onClick={() => onStart(subjectSession, session.defaultMode)}
-                  disabled={subjectSession.length === 0}
-                >
-                  Review
-                </Button>
-              </div>
-              {open && (
-                <ul className="space-y-0.5 px-3 pb-2 pl-9">
-                  {pool.map((e) => (
-                    <li
-                      key={e.question.id}
-                      className="flex items-baseline justify-between gap-3 text-xs"
-                    >
-                      <span className="truncate text-neutral-700 dark:text-neutral-300">
-                        {e.question.title ?? e.question.id}
-                      </span>
-                      <span
-                        className={`shrink-0 ${
-                          e.card.state === "new"
-                            ? "text-accent-text"
-                            : "text-neutral-400 dark:text-neutral-500"
-                        }`}
-                      >
-                        {dueLabel(e, now)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                )}
+              </span>
+              <Button
+                variant="ghost"
+                className="shrink-0"
+                onClick={() => onStart(subjectSession, session.defaultMode)}
+                disabled={subjectSession.length === 0}
+              >
+                Review
+              </Button>
             </div>
-          );
-        })}
-      </div>
-
-      <Button
-        size="lg"
-        className="w-full"
-        onClick={() => onStart(allSession, session.defaultMode)}
-        disabled={allSession.length === 0}
-      >
-        {allSession.length === 0
-          ? "Nothing to review 🎉"
-          : `Review all (${allSession.length} card${allSession.length > 1 ? "s" : ""})`}
-      </Button>
+            {open && (
+              <ul className="space-y-1.5 border-t border-edge bg-neutral-50 px-4 py-3 pl-10 dark:bg-neutral-900/40">
+                {pool.map((e) => (
+                  <li key={e.question.id} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="truncate text-neutral-700 dark:text-neutral-300">
+                      <TitleText text={e.question.title ?? e.question.id} />
+                    </span>
+                    <span className="shrink-0 text-xs text-neutral-500 dark:text-neutral-400">
+                      {dueLabel(e, now)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -302,7 +383,7 @@ function CustomSession({
         {queue === null
           ? "…"
           : queue.length === 0
-            ? "Nothing due for this deck 🎉"
+            ? "Nothing due in this selection"
             : `Start reviewing ${queue.length} card${queue.length > 1 ? "s" : ""}`}
       </Button>
     </div>

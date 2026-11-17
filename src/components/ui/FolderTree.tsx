@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import type { FolderNode } from "../../lib/folderTree";
-import { FolderIcon } from "../icons";
+import { FolderIcon, PencilIcon, PlusIcon, TrashIcon } from "../icons";
 import { EmptyState } from "./EmptyState";
 
 export interface FolderTreeProps {
@@ -113,7 +113,7 @@ export function FolderTree({
         onDragOver={dragOver(node.path)}
         onDragLeave={dragLeave(node.path)}
         onDrop={drop(node.path)}
-        className={`group flex w-full items-center gap-1 rounded pr-1 text-xs ${
+        className={`group flex w-full items-center gap-1 rounded-md pr-1 text-[13px] ${
           dropTarget === node.path
             ? "bg-accent-soft ring-1 ring-accent"
             : selected.includes(node.path)
@@ -131,32 +131,32 @@ export function FolderTree({
             <FolderIcon />
             <span className="truncate">{node.name}</span>
           </span>
-          <span className="pl-1 text-neutral-400 group-hover:hidden">{countFor(node.path)}</span>
+          <span className="pl-1 text-xs text-neutral-400 tabular-nums group-hover:hidden">{countFor(node.path)}</span>
         </button>
         <span className="hidden shrink-0 gap-0.5 group-hover:flex">
           <button
             onClick={() => onCreate(node.path)}
             title="New subfolder"
             aria-label={`New subfolder in ${node.path}`}
-            className="rounded px-1 text-neutral-400 hover:text-accent"
+            className="rounded p-0.5 text-neutral-400 hover:text-accent"
           >
-            +
+            <PlusIcon className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => onRename(node.path)}
             title="Rename / move"
             aria-label={`Rename folder ${node.path}`}
-            className="rounded px-1 text-neutral-400 hover:text-accent"
+            className="rounded p-0.5 text-neutral-400 hover:text-accent"
           >
-            ✎
+            <PencilIcon className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => onDelete(node.path)}
             title="Delete folder"
             aria-label={`Delete folder ${node.path}`}
-            className="rounded px-1 text-neutral-400 hover:text-red-600"
+            className="rounded p-0.5 text-neutral-400 hover:text-red-600"
           >
-            ×
+            <TrashIcon className="h-3.5 w-3.5" />
           </button>
         </span>
       </div>
@@ -173,7 +173,7 @@ export function FolderTree({
         onDragOver={dragOver("")}
         onDragLeave={dragLeave("")}
         onDrop={drop("")}
-        className={`flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs ${
+        className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-[13px] ${
           dropTarget === ""
             ? "bg-accent-soft ring-1 ring-accent"
             : selected.length === 0
@@ -182,7 +182,7 @@ export function FolderTree({
         }`}
       >
         <span>{rootLabel}</span>
-        <span className="text-neutral-400">{rootCount}</span>
+        <span className="text-xs text-neutral-400 tabular-nums">{rootCount}</span>
       </button>
       {nodes.map((n) => (
         <Row key={n.path} node={n} depth={0} />

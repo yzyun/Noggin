@@ -17,11 +17,100 @@
   --color-sidebar: var(--sidebar);
   --color-edge: var(--edge);
   --font-sans: var(--font-app);
+  --font-display: var(--font-heading);
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* The neutral ramp is themed too: a warm stone scale mixed with each
+     theme's tint, so every `neutral-*` utility (muted text, hovers, chips)
+     follows the theme instead of sitting on it as cold grey. */
+  --color-neutral-50: color-mix(in oklab, #fafaf9, var(--tint) var(--tint-amt));
+  --color-neutral-100: color-mix(in oklab, #f5f4f2, var(--tint) var(--tint-amt));
+  --color-neutral-200: color-mix(in oklab, #e9e6e2, var(--tint) var(--tint-amt));
+  --color-neutral-300: color-mix(in oklab, #d6d3d1, var(--tint) var(--tint-amt));
+  --color-neutral-400: color-mix(in oklab, var(--muted-400), var(--tint) var(--tint-amt));
+  --color-neutral-500: color-mix(in oklab, #736d68, var(--tint) var(--tint-amt));
+  --color-neutral-600: color-mix(in oklab, #57534e, var(--tint) var(--tint-amt));
+  --color-neutral-700: color-mix(in oklab, #44403c, var(--tint) var(--tint-amt));
+  --color-neutral-800: color-mix(in oklab, #2b2825, var(--tint) var(--tint-amt));
+  --color-neutral-900: color-mix(in oklab, #1c1917, var(--tint) var(--tint-amt));
+  --color-neutral-950: color-mix(in oklab, #0c0a09, var(--tint) var(--tint-amt));
 }
 
-/* Light (default) */
+/* Light (default) — paper & ink: warm off-white, near-black ink as the
+   accent (matching the monochrome logo), highlighter yellow for selection. */
 :root {
+  --accent: #1c1917;
+  --accent-hover: #44403c;
+  --accent-soft: #f7edc8;
+  --accent-text: #4a3a08;
+  --on-accent: #fbfaf8;
+  --app-bg: #faf9f7;
+  --surface: #ffffff;
+  --sidebar: #f3f1ed;
+  --edge: #e5e2dc;
+  --text: #1c1917;
+  --tint: #000000;
+  --tint-amt: 0%;
+  /* Muted text on light surfaces: darker than stock 400 for legibility. */
+  --muted-400: #8f8983;
+  --font-app: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: ui-serif, "New York", "Iowan Old Style", Palatino, Georgia, serif;
+}
+
+html.dark {
+  --muted-400: #a8a29e;
+}
+
+/* Data-viz colours (Progress). One blue hue throughout, stepped per mode so
+   "more" always moves away from the surface; fixed across themes because a
+   chart colour encodes data, not brand. */
+:root {
+  --viz: #2a78d6;
+  --viz-seq-1: #b7d3f6;
+  --viz-seq-2: #6da7ec;
+  --viz-seq-3: #2a78d6;
+  --viz-seq-4: #184f95;
+  --viz-learning: #86b6ef;
+  --viz-young: #3987e5;
+  --viz-mature: #184f95;
+  --viz-track: #e9e6e2; /* zero / unfilled */
+  --viz-none: #d6d3d1; /* "not started" segment */
+  /* label ink inside a fill, by that fill's luminance */
+  --viz-on-light-step: #0b0b0b;
+  --viz-ink-learning: #0b0b0b;
+  --viz-ink-mature: #ffffff;
+}
+html.dark {
+  --viz: #3987e5;
+  --viz-seq-1: #104281;
+  --viz-seq-2: #1c5cab;
+  --viz-seq-3: #3987e5;
+  --viz-seq-4: #86b6ef;
+  --viz-learning: #184f95;
+  --viz-young: #3987e5;
+  --viz-mature: #9ec5f4;
+  --viz-track: #2b2825;
+  --viz-none: #57534e;
+  --viz-on-light-step: #ffffff;
+  --viz-ink-learning: #ffffff;
+  --viz-ink-mature: #0b0b0b;
+}
+
+html[data-theme="dark"] {
+  --accent: #edeae6;
+  --accent-hover: #ffffff;
+  --accent-soft: #3b3216;
+  --accent-text: #f3dc8f;
+  --on-accent: #151412;
+  --app-bg: #131210;
+  --surface: #1c1a18;
+  --sidebar: #171614;
+  --edge: #2f2c28;
+  --text: #edeae6;
+}
+
+/* The original cool white + blue look */
+html[data-theme="blue"] {
   --accent: #2563eb;
   --accent-hover: #3b82f6;
   --accent-soft: #dbeafe;
@@ -29,23 +118,11 @@
   --on-accent: #ffffff;
   --app-bg: #ffffff;
   --surface: #ffffff;
-  --sidebar: #fafafa;
-  --edge: #e5e5e5;
-  --text: #171717;
-  --font-app: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-html[data-theme="dark"] {
-  --accent: #2563eb;
-  --accent-hover: #3b82f6;
-  --accent-soft: #1e3a5f;
-  --accent-text: #bfdbfe;
-  --on-accent: #ffffff;
-  --app-bg: #0a0a0a;
-  --surface: #171717;
-  --sidebar: #131313;
-  --edge: #2a2a2a;
-  --text: #f5f5f5;
+  --sidebar: #f8fafc;
+  --edge: #e2e8f0;
+  --text: #0f172a;
+  --tint: #64748b;
+  --tint-amt: 30%;
 }
 
 /* Warm paper + serif */
@@ -60,6 +137,8 @@ html[data-theme="sepia"] {
   --sidebar: #f1e8d6;
   --edge: #ddcdb0;
   --text: #3f3428;
+  --tint: #8b5e3c;
+  --tint-amt: 14%;
   --font-app: "Iowan Old Style", Palatino, Georgia, serif;
 }
 
@@ -75,6 +154,8 @@ html[data-theme="nord"] {
   --sidebar: #353c4a;
   --edge: #4c566a;
   --text: #e5e9f0;
+  --tint: #5e81ac;
+  --tint-amt: 22%;
 }
 
 /* Fresh green, light */
@@ -89,6 +170,8 @@ html[data-theme="forest"] {
   --sidebar: #ebf4eb;
   --edge: #d5e5d5;
   --text: #182a18;
+  --tint: #16a34a;
+  --tint-amt: 8%;
 }
 
 /* Deep purple dark */
@@ -103,6 +186,8 @@ html[data-theme="violet"] {
   --sidebar: #170f28;
   --edge: #332552;
   --text: #ede9fe;
+  --tint: #8b5cf6;
+  --tint-amt: 18%;
 }
 
 html,
@@ -116,6 +201,42 @@ body {
   color: var(--text);
   font-family: var(--font-app);
   -webkit-font-smoothing: antialiased;
+  accent-color: var(--accent);
+}
+
+button:not(:disabled),
+summary,
+label:has(input[type="checkbox"]) {
+  cursor: pointer;
+}
+
+/* One visible keyboard-focus treatment everywhere. */
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+.cm-editor :focus-visible {
+  outline: none;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* Scrollable without a visible scrollbar (e.g. the tag strip on a card). */
